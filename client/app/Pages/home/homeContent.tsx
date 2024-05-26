@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Image from 'next/image'
 import './home.css'
+import { useRecoilValue } from "recoil";
+import { IsMobileAtom } from "@/app/Atom/IsMobile";
 
 const HomeContent = () => {
-
+  const isMobileState = useRecoilValue(IsMobileAtom);
   return (
-    <div className="text-lg flex flex-col items-center gap-5">
-      <div className="p-2 flex gap-2 justify-between items-center w-4/5">
+    <div className="text-lg flex flex-col items-center gap-5 ">
+      <div className={`p-2 flex gap-2 justify-between items-center ${isMobileState ? 'w-full' : 'w-4/5'}`}>
         <div className="flex flex-col gap-2">
           <p className="text-2xl">Ngyễn Minh Tuấn</p>
           <p>Software engineer</p>
@@ -32,7 +34,7 @@ const HomeContent = () => {
       </div>
       <div className="w-4/5">
         <p className="mb-4">
-          Hello, my name is Nguyễn Minh Tuấn, a software engineer with expertise in developing cross-platform applications for both IOS and Android. Additionally, I possess strong web development skills.
+          My name is Nguyễn Minh Tuấn, a Fullstack Developer with expertise in developing cross-platform applications for both IOS and Android. Additionally, I possess strong web development skills.
         </p>
         <ol className="relative border-s border-gray-500 dark:border-gray-700">
           <li className="ms-4">

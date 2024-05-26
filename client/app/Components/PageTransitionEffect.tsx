@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LayoutRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { usePathname } from "next/navigation";
 import { useContext, useRef } from "react";
+import Toast from "./Toast";
+import { ToastAtom } from "../Atom/ToastAtom";
+import { useRecoilValue } from "recoil";
 
 function FrozenRouter(props: { children: React.ReactNode }) {
   const context = useContext(LayoutRouterContext ?? {});
@@ -24,7 +27,7 @@ const variants = {
 const PageTransitionEffect = ({ children }: { children: React.ReactNode }) => {
   // The `key` is tied to the url using the `usePathname` hook.
   const key = usePathname();
-
+  const toast = useRecoilValue(ToastAtom)
   return (
     <AnimatePresence mode="popLayout">
       <motion.div
@@ -34,12 +37,13 @@ const PageTransitionEffect = ({ children }: { children: React.ReactNode }) => {
         exit="exit"
         variants={variants}
         transition={{ type: "easeInOut", duration: 0.75 }}
-        className="overflow-hidden"
+        className="overflow-hidden w-full"
       >
         <FrozenRouter>
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center w-full">
             {children}
           </div>
+          <Toast isOpen={toast.isOpen} content={toast.message} />
         </FrozenRouter>
       </motion.div>
     </AnimatePresence>

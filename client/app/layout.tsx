@@ -4,7 +4,6 @@ import Navbar from "./Components/Navbar";
 import RecoidContextProvider from "./Provider/recoilContextProvider";
 import Provider from "./Provider/ThemeProvider";
 import IntroUI from "./Components/IntroUI";
-import { usePathname } from "next/navigation";
 import PageTransitionEffect from "./Components/PageTransitionEffect";
 
 export const metadata: Metadata = {
@@ -23,7 +22,7 @@ export default function RootLayout({
         <RecoidContextProvider>
           <Provider>
             <Navbar />
-            <main className="flex min-h-screen flex-col items-center p-4">
+            <main className="flex min-h-screen w-full flex-col items-center p-4">
               <div className="mb-6">
                 <IntroUI />
               </div>

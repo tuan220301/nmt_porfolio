@@ -4,37 +4,45 @@ import React, { useEffect, useState } from "react";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { isMobile } from "react-device-detect";
 import Dropdown from "./Dropdown";
+import { useRecoilState } from "recoil";
+import { IsMobileAtom } from "../Atom/IsMobile";
+import { usePathname } from "next/navigation";
 const Navbar = () => {
-  const [mobile, setMobile] = useState(false);
+  const [isMobileState, setIsMobileState] = useRecoilState(IsMobileAtom);
   const [openDropDown, setOpenDropDown] = useState(false);
+  const pathname = usePathname()
+
   useEffect(() => {
     if (isMobile) {
-      setMobile(true);
+      setIsMobileState(true)
     } else {
-      setMobile(false);
+      setIsMobileState(false);
     }
   }, [])
   const handleOpenDropDown = () => {
     setOpenDropDown(!openDropDown);
   }
+  const getLinkClass = (path: any) => (
+    pathname === path ? 'underline' : ''
+  );
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-center p-2  text-xl h-16 bg-neutral-100 dark:bg-neutral-950/30 backdrop-blur-md w-1/2 rounded-xl">
+    <nav className={`sticky top-0 z-50 flex items-center justify-center p-2 text-xl h-16 bg-neutral-100 dark:bg-neutral-950/30 backdrop-blur-md rounded-xl ${isMobileState ? 'w-full' : 'w-1/2'}`}>
       <div className="w-full flex items-center justify-between p-2">
-        <div className={mobile ? "w-1/2" : "w-[210px]"}>
+        <div className={isMobileState ? "w-1/2" : "w-[210px]"}>
           <Link href={"/"}>Nguyễn Minh Tuấn</Link>
         </div>
-        <div className={mobile ? "w-1/4 flex gap-2 items-center justify-between" : "w-[350px] flex gap-9 items-center"}>
+        <div className={isMobileState ? "w-1/4 flex gap-2 items-center justify-between" : "w-[350px] flex gap-9 items-center"}>
           {
-            mobile ? <></> :
+            isMobileState ? <></> :
               <div className="flex gap-6 items-center w-[240px]">
-                <Link href={"/"}>Home</Link>
-                <Link href={"/Pages/work"}>Work</Link>
-                <Link href={"/Pages/contact"}>Contact</Link>
+                <Link className={getLinkClass("/")} href={"/"}>Home</Link>
+                <Link className={getLinkClass("/Pages/work")} href={"/Pages/work"}>Work</Link>
+                <Link className={getLinkClass("/Pages/contact")} href={"/Pages/contact"}>Contact</Link>
               </div>
           }
           <ThemeSwitcher />
           {
-            mobile ?
+            isMobileState ?
               <div>
                 <button
                   onClick={handleOpenDropDown}
@@ -46,8 +54,8 @@ const Navbar = () => {
                 <Dropdown open={openDropDown}>
                   <div className="flex flex-col gap-3 text-lg">
                     <Link onClick={handleOpenDropDown} href={"/"}>Home</Link>
-                    <Link onClick={handleOpenDropDown} href={"/Pages/about"}>About</Link>
-                    <Link onClick={handleOpenDropDown} href={"/Pages/contact"}>contact</Link>
+                    <Link onClick={handleOpenDropDown} href={"/Pages/work"}>Work</Link>
+                    <Link onClick={handleOpenDropDown} href={"/Pages/contact"}>Contact</Link>
                   </div>
                 </Dropdown>
               </div>
