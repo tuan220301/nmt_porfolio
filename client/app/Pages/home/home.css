@@ -1,0 +1,51 @@
+/* animations.css */
+:root {
+  --border-color-light: black;
+  --border-color-dark: white;
+}
+
+@keyframes border-move {
+  0% {
+    border-top-color: var(--border-color);
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+  }
+  25% {
+    border-top-color: transparent;
+    border-right-color: var(--border-color);
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+  }
+  50% {
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: var(--border-color);
+    border-left-color: transparent;
+  }
+  75% {
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: var(--border-color);
+  }
+  100% {
+    border-top-color: var(--border-color);
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+  }
+}
+
+.hover-border {
+  --border-color: var(--border-color-light);
+}
+
+.dark .hover-border {
+  --border-color: var(--border-color-dark);
+}
+
+.hover-border {
+  animation: border-move 1s linear infinite;
+}
+
