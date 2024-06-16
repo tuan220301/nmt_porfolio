@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
 import LayOutDetail from "../layoutDetail/layoutDetail";
@@ -30,7 +31,8 @@ const LoataixuongClient = () => {
               <p className="font-bold">
                 Search Engine Optimization (SEO):
               </p>
-              The website is optimized for the keyword "loataixuong" to increase visibility on search engines.            </div>
+              The website is optimized for the keyword &apos;loataixuong&apos; to increase visibility on search engines.
+            </div>
           </li>
         </ul>
         <p className="font-bold">Technologies Used:</p>
@@ -85,7 +87,7 @@ const LoataixuongClient = () => {
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
-              Details about the admin page can be found in the "loataixuong admin" article.            </div>
+              Details about the admin page can be found in the &apos;loataixuong admin&apos; article.            </div>
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
@@ -94,7 +96,7 @@ const LoataixuongClient = () => {
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
-              The payment function is waiting for integration with Momo's API.            </div>
+              The payment function is waiting for integration with Momo&apos;s API.            </div>
           </li>
         </ul>
         <p className="font-bold">Notes:</p>
@@ -114,7 +116,7 @@ const LoataixuongClient = () => {
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
-              Details about the admin page can be found in the "loataixuong admin" article.            </div>
+              Details about the admin page can be found in the &apos;loataixuong admin&apos; article.            </div>
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
@@ -123,7 +125,7 @@ const LoataixuongClient = () => {
           </li>
           <li>
             <div className={isMobileAtom ? "" : "flex items-center gap-1"}>
-              The payment function is waiting for integration with Momo's API.            </div>
+              The payment function is waiting for integration with Momo&apos;s API.            </div>
           </li>
         </ul>
         <div className={isMobileAtom ? "" : "flex items-center"}>

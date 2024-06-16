@@ -1,4 +1,5 @@
-"use client"
+/* eslint-disable @next/next/no-img-element */
+"use client";
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
 import { ToastAtom } from "@/app/Atom/ToastAtom";
 import React, { useState } from "react";
@@ -11,7 +12,7 @@ const HomePage = () => {
   const [form, setForm] = useState({
     email: '',
     content: ''
-  })
+  });
   const email = "tuannguyenwin01@gmail.com";
 
   const setToast = useSetRecoilState(ToastAtom);
@@ -21,12 +22,12 @@ const HomePage = () => {
         setToast({
           isOpen: true,
           message: 'Copy to clipboard'
-        })
+        });
         setTimeout(() => {
           setToast({
             isOpen: false,
             message: ''
-          })
+          });
         }, 2000); // Reset tooltip after 2 seconds
       })
       .catch((err) => {
@@ -38,7 +39,7 @@ const HomePage = () => {
       ...form,
       [field]: e.target.value
     });
-  }
+  };
 
   const handleSubmit = async () => {
     const data = {
@@ -67,28 +68,28 @@ const HomePage = () => {
           setToast({
             isOpen: true,
             message: 'Your mail is sent!'
-          })
+          });
           setTimeout(() => {
             setToast({
               isOpen: false,
               message: ''
-            })
+            });
           }, 2000); // Reset tooltip after 2 seconds
           setForm({
             email: '',
             content: ''
-          })
+          });
         } else {
           setLoading(false);
           setToast({
             isOpen: true,
             message: 'Send mail fail!'
-          })
+          });
           setTimeout(() => {
             setToast({
               isOpen: false,
               message: ''
-            })
+            });
           }, 2000); // Reset tooltip after 2 seconds
 
         }
@@ -101,12 +102,12 @@ const HomePage = () => {
       setToast({
         isOpen: true,
         message: 'Email and content are required'
-      })
+      });
       setTimeout(() => {
         setToast({
           isOpen: false,
           message: ''
-        })
+        });
       }, 2000); // Reset tooltip after 2 seconds
 
     }
@@ -152,6 +153,6 @@ const HomePage = () => {
       </div>
 
     </div>
-  )
-}
-export default HomePage
+  );
+};
+export default HomePage;

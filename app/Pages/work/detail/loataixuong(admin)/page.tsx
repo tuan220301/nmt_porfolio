@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
 import LayOutDetail from "../layoutDetail/layoutDetail";
@@ -252,7 +253,8 @@ const LoataixuongAdmin = () => {
               <p className="font-bold">
                 Expanded functionality:
               </p>
-              Expanding the admin page to include more management capabilities.            </div>
+              Expanding the admin page to include more management capabilities.
+            </div>
           </li>
         </ul>
         <p className="font-bold">Notes:</p>

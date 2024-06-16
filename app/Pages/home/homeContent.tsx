@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import React from "react";
-import Image from 'next/image'
-import './home.css'
+import Image from 'next/image';
+import './home.css';
 import { useRecoilValue } from "recoil";
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
 import { saveAs } from 'file-saver';
@@ -89,5 +90,5 @@ const HomeContent = () => {
       </div>
     </div>
   );
-}
+};
 export default HomeContent;

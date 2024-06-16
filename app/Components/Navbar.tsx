@@ -10,18 +10,18 @@ import { usePathname } from "next/navigation";
 const Navbar = () => {
   const [isMobileState, setIsMobileState] = useRecoilState(IsMobileAtom);
   const [openDropDown, setOpenDropDown] = useState(false);
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   useEffect(() => {
     if (isMobile) {
-      setIsMobileState(true)
+      setIsMobileState(true);
     } else {
       setIsMobileState(false);
     }
-  }, [])
+  }, [setIsMobileState]);
   const handleOpenDropDown = () => {
     setOpenDropDown(!openDropDown);
-  }
+  };
   const getLinkClass = (path: any) => (
     pathname === path ? 'underline' : ''
   );
@@ -65,6 +65,6 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
-  )
-}
-export default Navbar
+  );
+};
+export default Navbar;
