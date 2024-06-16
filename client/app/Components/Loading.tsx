@@ -1,9 +1,16 @@
 import React from 'react';
-
-const Loading = () => {
+type LoadingProps = {
+  width?: any;
+  height?: any;
+}
+const Loading = (props: LoadingProps) => {
+  const { width, height } = props;
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900"></div>
+    <div className="flex justify-center items-center">
+      <div style={{
+        width: width,
+        height: height
+      }} className={`animate-spin rounded-full border-t-2 border-b-2 border-black dark:border-white`}></div>
     </div>
   );
 };

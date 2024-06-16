@@ -3,9 +3,22 @@ import Image from 'next/image'
 import './home.css'
 import { useRecoilValue } from "recoil";
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
-
+import { saveAs } from 'file-saver';
 const HomeContent = () => {
   const isMobileState = useRecoilValue(IsMobileAtom);
+
+  const ExportPDF = async () => {
+    try {
+      const response = await fetch('/img/pdf/my_cv.pdf');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const blob = await response.blob();
+      saveAs(blob, 'NguyenMinhTuan_CV.pdf');
+    } catch (error) {
+      console.error('Error fetching the PDF:', error);
+    }
+  };
   return (
     <div className="text-lg flex flex-col items-center gap-5 ">
       <div className={`p-2 flex gap-2 justify-between items-center ${isMobileState ? 'w-full' : 'w-4/5'}`}>
@@ -13,7 +26,9 @@ const HomeContent = () => {
           <p className="text-2xl">Ngyễn Minh Tuấn</p>
           <p>Software engineer</p>
           <div className="w-full items-center">
-            <button className="hover-border border-2 border-transparent rounded-md px-4 py-2">
+            <button
+              onClick={ExportPDF}
+              className="hover-border border-2 border-transparent rounded-md px-4 py-2">
               <p>
                 My CV
               </p>
@@ -29,7 +44,7 @@ const HomeContent = () => {
         </div>
       </div>
       <div className=" font-bold w-4/5">
-        <p>Resume</p>
+        <p>Resume !!!</p>
         <div className="border-2 border-gray-500 dark:border-grey-100 rounded-lg w-14"></div>
       </div>
       <div className="w-4/5">

@@ -22,7 +22,7 @@ export default function RootLayout({
         <RecoidContextProvider>
           <Provider>
             <Navbar />
-            <main className="flex min-h-screen w-full flex-col items-center p-4">
+            <main className="flex min-h-screen flex-col items-center p-4 w-full">
               <div className="mb-6">
                 <IntroUI />
               </div>

@@ -4,8 +4,10 @@ import { ToastAtom } from "@/app/Atom/ToastAtom";
 import React, { useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import './../home/home.css';
+import Loading from "@/app/Components/Loading";
 const HomePage = () => {
   const isMobileAtom = useRecoilValue(IsMobileAtom);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     email: '',
     content: ''
@@ -37,9 +39,79 @@ const HomePage = () => {
       [field]: e.target.value
     });
   }
-  const handleSubmit = () => {
-    console.log('form: ', form);
-  }
+
+  const handleSubmit = async () => {
+    const data = {
+      service_id: 'Porfolio_001',
+      template_id: 'template_os9a3rd',
+      user_id: 'vc3VpRoVUcwGXo6Wm',
+      template_params: {
+        'from_name': form.email,
+        'message': form.content,
+        'to_name': 'Tuan'
+      }
+    };
+    if (form.content !== '' || form.email !== '') {
+      try {
+        setLoading(true);
+        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          setLoading(false);
+          setToast({
+            isOpen: true,
+            message: 'Your mail is sent!'
+          })
+          setTimeout(() => {
+            setToast({
+              isOpen: false,
+              message: ''
+            })
+          }, 2000); // Reset tooltip after 2 seconds
+          setForm({
+            email: '',
+            content: ''
+          })
+        } else {
+          setLoading(false);
+          setToast({
+            isOpen: true,
+            message: 'Send mail fail!'
+          })
+          setTimeout(() => {
+            setToast({
+              isOpen: false,
+              message: ''
+            })
+          }, 2000); // Reset tooltip after 2 seconds
+
+        }
+      } catch (error: any) {
+        setLoading(false);
+        console.log('error: ', error);
+      }
+    } else {
+      setLoading(false);
+      setToast({
+        isOpen: true,
+        message: 'Email and content are required'
+      })
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          message: ''
+        })
+      }, 2000); // Reset tooltip after 2 seconds
+
+    }
+  };
+
   return (
     <div className={isMobileAtom ? 'w-full' : 'w-1/2'}>
       <div className="w-full flex items-center justify-center mb-6 text-center text-lg">
@@ -59,7 +131,7 @@ const HomePage = () => {
         </div>
       </div>
       <p className="text-xl font-bold">Contact !!!</p>
-      <div className="border-2 rounded-lg w-28 mb-4"></div>
+      <div className="border-2 rounded-lg w-20 mb-4"></div>
       <div className={`flex ${isMobileAtom ? 'flex-col' : 'flex-row justify-between'} w-full `}>
         <div className="w-full">
           <div className="w-full flex flex-col gap-2 text-lg">
@@ -69,8 +141,11 @@ const HomePage = () => {
             <textarea className="bg-gray-50 min-h-20 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-[#202023] dark:border-white dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" value={form.content} onChange={(e) => handleChangeInput(e, 'content')} />
           </div>
           <div className="w-full flex items-center justify-center mt-6">
-            <button className="hover-border border-2 border-transparent rounded-md text-lg px-6 py-2" onClick={handleSubmit}>
+            <button className={`${loading ? 'flex items-center justify-between' : ''} hover-border border-2 border-transparent rounded-md text-lg px-6 py-2 w-36`} onClick={handleSubmit}>
               Submit
+              {loading ?
+                <Loading width={'20px'} height={'20px'} /> : <></>
+              }
             </button>
           </div>
         </div>
