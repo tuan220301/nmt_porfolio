@@ -47,12 +47,12 @@ const SentimentAnalysisWebsite = () => {
         <div className={isMobileAtom ? "" : "flex items-center"}>
           <p className="font-bold">Url:</p>
           <a
-            href="https://patsoft.netlify.app/"
+            href="https://patsoft.netlify.app"
             target="_blank"
             rel="noopener noreferrer"
             className="ml-2 text-blue-500 underline"
           >
-            https://loataixuong.com
+            https://patsoft.netlify.app
           </a>
         </div>
       </div>
