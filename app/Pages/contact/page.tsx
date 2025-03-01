@@ -21,12 +21,16 @@ const HomePage = () => {
       .then(() => {
         setToast({
           isOpen: true,
-          message: 'Copy to clipboard'
+          message: 'Copy to clipboard',
+          isAutoHide: false,
+          status: 'INFO'
         });
         setTimeout(() => {
           setToast({
             isOpen: false,
-            message: ''
+            message: '',
+            isAutoHide: false,
+            status: ''
           });
         }, 2000); // Reset tooltip after 2 seconds
       })
@@ -67,12 +71,16 @@ const HomePage = () => {
           setLoading(false);
           setToast({
             isOpen: true,
-            message: 'Your mail is sent!'
+            message: 'Your mail is sent!',
+            isAutoHide: false,
+            status: ''
           });
           setTimeout(() => {
             setToast({
               isOpen: false,
-              message: ''
+              message: '',
+              isAutoHide: false,
+              status: ''
             });
           }, 2000); // Reset tooltip after 2 seconds
           setForm({
@@ -83,12 +91,16 @@ const HomePage = () => {
           setLoading(false);
           setToast({
             isOpen: true,
-            message: 'Send mail fail!'
+            message: 'Send mail fail!',
+            isAutoHide: false,
+            status: 'ERROR'
           });
           setTimeout(() => {
             setToast({
               isOpen: false,
-              message: ''
+              message: '',
+              isAutoHide: false,
+              status: ''
             });
           }, 2000); // Reset tooltip after 2 seconds
 
@@ -101,12 +113,16 @@ const HomePage = () => {
       setLoading(false);
       setToast({
         isOpen: true,
-        message: 'Email and content are required'
+        message: 'Email and content are required',
+        isAutoHide: false,
+        status: 'ERROR'
       });
       setTimeout(() => {
         setToast({
           isOpen: false,
-          message: ''
+          message: '',
+          isAutoHide: false,
+          status: 'INFO'
         });
       }, 2000); // Reset tooltip after 2 seconds
 

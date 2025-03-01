@@ -6,7 +6,6 @@ type DropDownProps = {
 }
 const Dropdown = (props: DropDownProps) => {
   const { children, open } = props;
-  console.log('open: ', open);
   return (
     <>
       {

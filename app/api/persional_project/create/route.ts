@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       image_preview: imageUrl, // Lưu URL hình ảnh
     });
 
-    return NextResponse.json({ message: "Project created successfully", project: newProject });
+    return NextResponse.json({ message: "Project created successfully", data: newProject, isSuccess: true });
 
   } catch (error) {
     return OnErrorReturn(error);
