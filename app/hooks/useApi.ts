@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_URL_API || "http://localhost:3000";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_URL_API || "http://localhost:3000";
 
 export function useApi() {
   const router = useRouter();
@@ -10,23 +11,27 @@ export function useApi() {
   const callApi = async (
     endpoint: string,
     method: "GET" | "POST" | "PUT" | "DELETE",
-    body?: any
+    body?: any,
   ) => {
     try {
       const isFormData = body instanceof FormData;
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method,
+        cache: "no-store", // 🚀 Luôn lấy dữ liệu mới
         headers: isFormData
-          ? undefined // ❌ Không đặt Content-Type nếu là FormData
-          : { "Content-Type": "application/json" }, // ✅ Chỉ đặt với JSON
+          ? { "Cache-Control": "no-store" } // Không set Content-Type khi là FormData
+          : {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store", // 🚀 Ngăn cache CDN & browser
+            },
         credentials: "include", // Gửi cookie chứa token
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          router.push("/Pages/login"); // Chuyển hướng khi token hết hạn
+          router.push("/Pages/login"); // Token hết hạn → login lại
           return { error: "Unauthorized" };
         }
 
