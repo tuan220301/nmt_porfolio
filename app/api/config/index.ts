@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ResponseApi } from "../models/response"
+import { ResponseApi } from "../models/response";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/app/lib/mongodb";
 
@@ -12,7 +12,7 @@ export const OnErrorReturn = (error: any, status: number = 500) => {
 };
 
 export const CheckTokenInCookies = async (
-  callback: (decodedToken: any) => Promise<Response>
+  callback: (decodedToken: any) => Promise<Response>,
 ) => {
   await connectDB();
   const token = cookies().get("token")?.value;
@@ -22,11 +22,12 @@ export const CheckTokenInCookies = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret_key");
-    // ✅ Token hợp lệ -> chạy callback
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "default_secret_key",
+    );
     return await callback(decoded);
   } catch (error) {
     return OnErrorReturn("Invalid or expired token", 401);
   }
 };
-

@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const content = formData.get("content") as string;
     const userId = formData.get("user_id") as string;
     const title = formData.get("title") as string;
+    const des = formData.get("des") as string;
     if (!file) {
       return OnErrorReturn("No image uploaded");
     }
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       user_id: userId,
       create_at: new Date(),
       update_at: new Date(),
+      des: des,
       image_preview: imageUrl, // Lưu URL hình ảnh
     });
 

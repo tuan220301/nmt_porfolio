@@ -1,32 +1,70 @@
 'use client'
 
 import { LoadingAtom } from "@/app/Atom/IsLoading";
+import { LoggedAtom } from "@/app/Atom/IsLogged";
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
 import { ToastAtom } from "@/app/Atom/ToastAtom";
-import { WorkPageDetailStatus } from "@/app/Atom/WorkAtom";
+import { WorkPageDetailData, WorkPageDetailStatus } from "@/app/Atom/WorkAtom";
 import ButtonIconComponent from "@/app/Components/ButtonIconComponent";
 import InputComponent from "@/app/Components/Input";
+import DeleteProjectModal from "@/app/Components/Modals/DeleteModal";
 import Tiptap from "@/app/Components/Tiptap/Tiptap"
 import UploadAndDisplayImage from "@/app/Components/UploadImage";
 import { ProjectResponseType } from "@/app/Ults";
 import { ResponseApi } from "@/app/api/models/response";
-import { useApi } from "@/app/hooks/useApi";
+import { API_BASE_URL, useApi } from "@/app/hooks/useApi";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { useRecoilValue, useSetRecoilState } from "recoil";
+import { useEffect, useMemo, useState } from "react";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 
 const DetailProject = () => {
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [image, setImage] = useState<any>(null);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [des, setDes] = useState('');
   const isMobileAtom = useRecoilValue(IsMobileAtom);
+  const isLogedAtom = useRecoilValue(LoggedAtom);
   const workPageStatus = useRecoilValue(WorkPageDetailStatus);
+  const [workPageDataAtom, setWorkPageDataAtom] = useRecoilState(WorkPageDetailData);
   const setLoadingAtom = useSetRecoilState(LoadingAtom);
   const setToastAtom = useSetRecoilState(ToastAtom);
   const { callApi } = useApi();
   const router = useRouter();
 
 
+  useEffect(() => {
+    const fetchImage = async () => {
+      if (workPageStatus === "EDIT" && workPageDataAtom.image_preview) {
+        console.log("work page detail: ", workPageDataAtom);
+
+        // Chuyển URL ảnh từ API thành File
+        const file_img = await urlToFile(
+          API_BASE_URL.slice(0, -4) + workPageDataAtom.image_preview
+        );
+        setDes(workPageDataAtom.des ?? '');
+        setImage(file_img);
+        setContent(workPageDataAtom.content);
+        setTitle(workPageDataAtom.title);
+      } else {
+        setImage(null);
+        setContent("");
+        setTitle("");
+        setDes('');
+      }
+    };
+
+    fetchImage();
+  }, [workPageStatus, workPageDataAtom]);
+
+  const urlToFile = async (url: string, fileName?: string): Promise<File> => {
+    const response = await fetch(url, { credentials: "include" }); // Gửi kèm cookie nếu cần
+    const blob = await response.blob(); // Chuyển dữ liệu thành Blob
+    const ext = blob.type.split("/")[1] || "jpg"; // Lấy đuôi file từ mime type
+    const finalFileName = fileName || url.split("/").pop() || `image.${ext}`;
+
+    return new File([blob], finalFileName, { type: blob.type });
+  };
   const handleSave = async () => {
     setLoadingAtom(true);
     let user_id = '';
@@ -34,14 +72,18 @@ const DetailProject = () => {
     const formData = new FormData();
     if (user_id !== '') {
       formData.append('title', title);
-      formData.append('image', image);
       formData.append('content', content);
+      formData.append('image', image);
       formData.append('user_id', user_id);
+      formData.append('des', des);
+      if (workPageStatus === 'EDIT') {
+        formData.append('project_id', workPageDataAtom._id ?? '');
+      }
       console.log('FormData contents:');
       formData.forEach((value, key) => {
         console.log(`${key}:`, value);
       });
-      const projectResponse: ResponseApi<ProjectResponseType> = await callApi('/persional_project/create', "POST", formData);
+      const projectResponse: ResponseApi<ProjectResponseType> = await callApi(workPageStatus === 'EDIT' ? '/persional_project/edit' : '/persional_project/create', "POST", formData);
       if (projectResponse && projectResponse.isSuccess) {
         setToastAtom({
           isOpen: true,
@@ -72,8 +114,29 @@ const DetailProject = () => {
       })
     }
   }
+
+  const handleDelete = async () => {
+    setDeleteModalOpen(false);
+    setLoadingAtom(true);
+
+    const response = await callApi(`/persional_project/delete?project_id=${workPageDataAtom._id}`, "DELETE", { project_id: workPageDataAtom._id });
+
+    if (response?.isSuccess) {
+      setToastAtom({ isOpen: true, message: "Project deleted", status: "SUCCESS", isAutoHide: true });
+      setLoadingAtom(false);
+      router.push("/Pages/work");
+    } else {
+      setLoadingAtom(false);
+      setToastAtom({ isOpen: true, message: response?.message || "Failed to delete", status: "ERROR", isAutoHide: true });
+    }
+
+  };
+
   const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
+  }
+  const handleChangeDes = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDes(e.target.value);
   }
   const TitleInputMemo = useMemo(() => {
     return (
@@ -83,6 +146,14 @@ const DetailProject = () => {
       </div>
     )
   }, [title])
+  const DesInputMemo = useMemo(() => {
+    return (
+      <div>
+        <div className="font-bold text-lg">Desciption</div>
+        <InputComponent onChangeText={handleChangeDes} value={des} type="text" />
+      </div>
+    )
+  }, [des])
 
   const UpLoadImageMemo = useMemo(() => {
     return (
@@ -91,7 +162,7 @@ const DetailProject = () => {
         <UploadAndDisplayImage setSelectedImage={setImage} selectedImage={image} />
       </div>
     )
-  }, [image])
+  }, [image, workPageStatus])
   const EditorMemo = useMemo(() => {
     return (
       <div>
@@ -115,26 +186,54 @@ const DetailProject = () => {
           <div className="border-2 rounded-lg w-24"></div>
         </div>
         <div className="p-2">
-          <ButtonIconComponent
-            title="Save"
-            icon={
-              <div className="text-lg ml-2">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
-                  <path fillRule="evenodd" d="M4 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm1 2.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.28.53L8 9.06l-1.72 1.72A.75.75 0 0 1 5 10.25v-6Z" clipRule="evenodd" />
-                </svg>
+          {
+            isLogedAtom && (
+              <div className="flex items-center gap-2">
+                {workPageStatus === 'EDIT' && <ButtonIconComponent
+                  title="Delete"
+                  icon={
+                    <div className="text-lg ml-2">
+
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
+                        <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+                        <path fillRule="evenodd" d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM5.72 7.47a.75.75 0 0 1 1.06 0L8 8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06L9.06 9.75l1.22 1.22a.75.75 0 1 1-1.06 1.06L8 10.81l-1.22 1.22a.75.75 0 0 1-1.06-1.06l1.22-1.22-1.22-1.22a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  }
+                  onClick={() => setDeleteModalOpen(true)}
+                />}
+                <ButtonIconComponent
+                  title="Save"
+                  icon={
+                    <div className="text-lg ml-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
+                        <path fillRule="evenodd" d="M4 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4Zm1 2.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.28.53L8 9.06l-1.72 1.72A.75.75 0 0 1 5 10.25v-6Z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  }
+                  onClick={handleSave}
+                />
               </div>
-            }
-            onClick={handleSave}
-          />
+            )
+          }
         </div>
       </div>
       <div className="p-2">
         {TitleInputMemo}
       </div>
       <div className="p-2">
+        {DesInputMemo}
+      </div>
+
+      <div className="p-2">
         {UpLoadImageMemo}
       </div>
       {EditorMemo}
+      <DeleteProjectModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

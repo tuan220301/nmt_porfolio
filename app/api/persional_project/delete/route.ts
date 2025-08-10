@@ -8,6 +8,8 @@ import { CheckTokenInCookies, OnErrorReturn } from "../../config";
 export async function DELETE(req: NextRequest) {
   return CheckTokenInCookies(async (decodedToken) => {
     try {
+      await connectDB(); // 🔹 Đảm bảo kết nối DB trước
+
       const bucket = await getGridFSBucket();
       if (!bucket) return OnErrorReturn("Failed to initialize GridFSBucket");
 
@@ -19,31 +21,38 @@ export async function DELETE(req: NextRequest) {
       const project = await PersonalProject.findById(projectId);
       if (!project) return OnErrorReturn("Project not found", 404);
 
-      // **🔥 Kiểm tra quyền xoá**
+      // 🔹 Kiểm tra quyền xoá
       if (project.user_id.toString() !== decodedToken.userId) {
         return OnErrorReturn("Unauthorized", 403);
       }
 
-      // **🔥 Xoá ảnh nếu có**
+      // 🔹 Xoá ảnh trong GridFS nếu có
       if (project.image_preview) {
-        const fileId = project.image_preview.split("/").pop();
-        if (fileId) {
-          try {
-            await bucket.delete(new ObjectId(fileId));
-          } catch (err) {
-            console.error("Failed to delete image:", err);
+        try {
+          let fileId = project.image_preview;
+
+          // Nếu lưu dạng URL → lấy ObjectId ở cuối
+          if (fileId.includes("/")) {
+            fileId = fileId.split("/").pop() || "";
           }
+
+          if (ObjectId.isValid(fileId)) {
+            await bucket.delete(new ObjectId(fileId));
+          }
+        } catch (err) {
+          console.warn("Failed to delete image (may not exist):", err);
         }
       }
 
-      // **🔥 Xoá project**
+      // 🔹 Xoá project
       await project.deleteOne();
 
-      return NextResponse.json({ message: "Project deleted successfully" });
-
+      return NextResponse.json({
+        message: "Project deleted successfully",
+        isSuccess: true,
+      });
     } catch (error) {
       return OnErrorReturn(error);
     }
   });
 }
-

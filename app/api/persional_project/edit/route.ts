@@ -17,64 +17,70 @@ export async function POST(req: NextRequest) {
       const projectId = formData.get("project_id") as string;
       const content = formData.get("content") as string;
       const title = formData.get("title") as string;
-      const file = formData.get("image") as File | null;
+      const des = formData.get("des") as string;
+      const file = formData.get("image") as File;
 
       if (!projectId) return OnErrorReturn("Project ID is required", 400);
 
       const project = await PersonalProject.findById(projectId);
       if (!project) return OnErrorReturn("Project not found", 404);
-      const projectOwnerId = project.user_id instanceof ObjectId ? project.user_id.toString() : project.user_id;
-      console.log("User from token:", decodedToken.userId);
-      console.log("Project owner:", projectOwnerId);
+      const projectOwnerId =
+        project.user_id instanceof ObjectId
+          ? project.user_id.toString()
+          : project.user_id;
 
       if (projectOwnerId !== decodedToken.userId) {
-        return OnErrorReturn("Unauthorized: You can only edit your own project", 403);
+        return OnErrorReturn(
+          "Unauthorized: You can only edit your own project",
+          403,
+        );
       }
 
-      let imageUrl = project.image_preview;
-
-      // **🔥 Xử lý thay đổi hình ảnh**
-      if (file) {
-        // Xoá ảnh cũ nếu có
-        if (project.image_preview) {
-          const oldFileId = project.image_preview.split("/").pop();
-          if (oldFileId) {
-            try {
-              await bucket.delete(new ObjectId(oldFileId));
-            } catch (err) {
-              console.error("Failed to delete old image:", err);
-            }
+      // 🔥 **XÓA ẢNH CŨ TRƯỚC KHI LƯU ẢNH MỚI**
+      if (project.image_preview) {
+        const oldFileId = project.image_preview.split("/").pop();
+        if (oldFileId && ObjectId.isValid(oldFileId)) {
+          try {
+            console.log("oldFileId: ", oldFileId);
+            // await bucket.delete(new ObjectId(oldFileId));
+          } catch (err) {
+            console.error("❌ Lỗi khi xóa ảnh cũ:", err);
           }
         }
-
-        // **🔥 Lưu ảnh mới vào GridFS**
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const stream = Readable.from(buffer);
-        const uploadStream = bucket.openUploadStream(file.name);
-        stream.pipe(uploadStream);
-
-        const fileId = await new Promise<ObjectId>((resolve, reject) => {
-          uploadStream.on("finish", () => resolve(uploadStream.id));
-          uploadStream.on("error", reject);
-        });
-
-        // Cập nhật đường dẫn ảnh mới
-        imageUrl = `/api/personal_project/images_return/${fileId}`;
       }
 
-      // **🔥 Cập nhật project**
+      // 🔥 **LƯU ẢNH MỚI**
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const stream = Readable.from(buffer);
+      const uploadStream = bucket.openUploadStream(file.name);
+
+      stream.pipe(uploadStream);
+
+      const fileId: ObjectId = await new Promise((resolve, reject) => {
+        uploadStream.on("finish", () => resolve(uploadStream.id as ObjectId));
+        uploadStream.on("error", reject);
+      });
+
+      if (!fileId) return OnErrorReturn("Failed to upload image", 500);
+
+      // Cập nhật đường dẫn mới của ảnh
+      const imageUrl = `/api/persional_project/images_return/${fileId.toString()}`;
+
+      // 🔥 **CẬP NHẬT PROJECT**
       project.title = title || project.title;
       project.content = content || project.content;
       project.update_at = new Date();
       project.image_preview = imageUrl;
-
+      project.des = des;
       await project.save();
 
-      return NextResponse.json({ message: "Project updated successfully", project });
-
+      return NextResponse.json({
+        message: "✅ Project updated successfully",
+        isSuccess: true,
+        project,
+      });
     } catch (error) {
       return OnErrorReturn(error);
     }
   });
 }
-

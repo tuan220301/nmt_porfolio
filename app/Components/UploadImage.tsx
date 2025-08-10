@@ -10,7 +10,6 @@ type UploadImageProps = {
 // Define a functional component named UploadAndDisplayImage
 const UploadAndDisplayImage = (props: UploadImageProps) => {
   const { ...prop } = props;
-  // Define a state variable to store the selected image
 
   // Return the JSX for rendering
   return (

@@ -11,7 +11,9 @@ export type LoginResponeType = {
   _id: string
 }
 export type ProjectResponseType = {
+  _id?: string,
   title: string,
+  des?: string,
   content: string,
   user_id: string,
   create_at: Date,

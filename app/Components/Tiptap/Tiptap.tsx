@@ -15,7 +15,7 @@ import Underline from '@tiptap/extension-underline'
 import TextStyle from '@tiptap/extension-text-style'
 import { EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { enableKeyboardNavigation, Slash, SlashCmd, SlashCmdProvider } from "@harshtalks/slash-tiptap";
 
 import './style.css'
@@ -31,8 +31,8 @@ type TipTapPropsType = {
 }
 
 const Tiptap = ({ onChangeContent, content }: TipTapPropsType) => {
-
   const [showColor, setShowColor] = useState(false);
+
   const editor = useEditor({
     extensions: [
       Document, Paragraph, Text,
@@ -90,8 +90,14 @@ const Tiptap = ({ onChangeContent, content }: TipTapPropsType) => {
       onChangeContent(editor.getHTML()); // Cập nhật state bên ngoài khi thay đổi nội dung
     },
 
+
   });
 
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content); // Cập nhật content khi có dữ liệu từ API
+    }
+  }, [content, editor]);
 
   const CheckForBoldWhenActive = (item: any) => {
     const isActive =
