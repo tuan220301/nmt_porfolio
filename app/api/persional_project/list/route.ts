@@ -3,6 +3,9 @@ import { connectDB } from "@/app/lib/mongodb";
 import PersonalProject from "../../models/personalProject";
 import { OnErrorReturn } from "../../config";
 
+export const dynamic = "force-dynamic"; // 🚀 Buộc Next.js luôn chạy server-side mỗi lần gọi API
+export const revalidate = 0; // 🚀 Không ISR, luôn fetch mới
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -10,7 +13,6 @@ export async function GET(req: NextRequest) {
       .sort({ create_at: -1 })
       .lean();
 
-    // Thay vì đọc ảnh từ GridFS → chỉ trả URL
     const projectsWithImageUrl = projects.map((project) => {
       let image_url = null;
       if (project.image_preview) {
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
       { status: 200 },
     );
 
-    // Chặn cache hoàn toàn phía server & proxy
+    // 🚀 Chặn cache ở mọi tầng
     res.headers.set(
       "Cache-Control",
       "no-store, no-cache, must-revalidate, proxy-revalidate",
