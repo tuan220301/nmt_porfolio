@@ -25,8 +25,7 @@ export async function GET(req: NextRequest) {
         image_url,
       };
     });
-
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         isSuccess: true,
         message: "Get list project successfully",
@@ -34,6 +33,14 @@ export async function GET(req: NextRequest) {
       },
       { status: 200 },
     );
+    res.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
+
+    return res;
   } catch (error) {
     return OnErrorReturn(error);
   }

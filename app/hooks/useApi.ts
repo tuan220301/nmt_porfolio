@@ -15,20 +15,20 @@ export function useApi() {
   ) => {
     try {
       const isFormData = body instanceof FormData;
+      const noCacheUrl = `${API_BASE_URL}${endpoint}?t=${Date.now()}`;
 
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(noCacheUrl, {
         method,
-        cache: "no-store", // 🚀 Luôn lấy dữ liệu mới
+        cache: "no-store",
         headers: isFormData
-          ? { "Cache-Control": "no-store" } // Không set Content-Type khi là FormData
+          ? { "Cache-Control": "no-store" }
           : {
               "Content-Type": "application/json",
-              "Cache-Control": "no-store", // 🚀 Ngăn cache CDN & browser
+              "Cache-Control": "no-store",
             },
-        credentials: "include", // Gửi cookie chứa token
+        credentials: "include",
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
       });
-
       if (!response.ok) {
         if (response.status === 401) {
           router.push("/Pages/login"); // Token hết hạn → login lại
