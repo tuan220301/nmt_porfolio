@@ -5,13 +5,25 @@ type InputProps = {
   type: string;
   icon?: React.ReactNode;
   onEnter?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  isShowBorder?: boolean;
+  textSize?: string;
 };
 
-const InputComponent = ({ placeholder, onChangeText, value, type, icon, onEnter }: InputProps) => {
+const InputComponent = ({
+  placeholder,
+  onChangeText,
+  value,
+  type,
+  icon,
+  onEnter,
+  isShowBorder,
+  textSize,
+}: InputProps) => {
   return (
     <div
-      className="h-full flex items-center justify-between bg-gray-50 p-2.5 border rounded-lg transition-colors 
-      focus-within:border-blue-400 focus-within:border-2 w-full dark:bg-[#202023] border-gray-300"
+      className={`h-full flex items-center justify-between bg-gray-50 p-2.5 rounded-lg transition-colors 
+      focus-within:border-blue-400 focus-within:border-2 w-full dark:bg-[#202023] 
+      ${isShowBorder ? "border border-gray-300" : "border-0"}`}
     >
       <input
         value={value}
@@ -23,8 +35,11 @@ const InputComponent = ({ placeholder, onChangeText, value, type, icon, onEnter 
             onEnter(e);
           }
         }}
-        className={`h-full bg-gray-50 text-gray-900 text-sm dark:bg-[#202023] 
-        dark:placeholder-gray-400 dark:text-white border-0 focus:ring-0 outline-none ${icon ? "w-2/3" : "w-full"}`}
+        disabled={!isShowBorder}
+        className={`h-full bg-gray-50 text-gray-900 text-lg dark:bg-[#202023] 
+        dark:placeholder-gray-400 dark:text-white border-0 focus:ring-0 outline-none ${
+          icon ? "w-2/3" : "w-full"
+        }`}
       />
       {icon && <div>{icon}</div>}
     </div>
@@ -32,4 +47,3 @@ const InputComponent = ({ placeholder, onChangeText, value, type, icon, onEnter 
 };
 
 export default InputComponent;
-

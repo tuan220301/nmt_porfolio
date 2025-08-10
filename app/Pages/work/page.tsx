@@ -33,26 +33,29 @@ const AboutPage = () => {
   const [listProject, setListProject] = useState<ProjectResponseType[]>([]);
   useEffect(() => {
     setProjectDataAtom({
-      content: '',
-      image_preview: '',
-      title: '',
+      content: "",
+      image_preview: "",
+      title: "",
       create_at: new Date(),
       update_at: new Date(),
-    } as ProjectResponseType)
+    } as ProjectResponseType);
     handleGetListProject();
-  }, [])
+  }, []);
   const handleGetListProject = async () => {
     setLoadingAtom(true);
     try {
-      const projectResponse: ResponseApi<ProjectResponseType[]> = await callApi('/persional_project/list', "GET");
+      const projectResponse: ResponseApi<ProjectResponseType[]> = await callApi(
+        "/persional_project/list",
+        "GET",
+      );
       if (projectResponse && projectResponse.isSuccess) {
         setToastAtom({
           isOpen: true,
           isAutoHide: true,
           message: projectResponse.message,
-          status: 'SUCCESS'
-        })
-        console.log('project list data: ', projectResponse.data);
+          status: "SUCCESS",
+        });
+        console.log("project list data: ", projectResponse.data);
         if (projectResponse.data) {
           setListProject(projectResponse.data);
         }
@@ -61,56 +64,74 @@ const AboutPage = () => {
         setToastAtom({
           isOpen: true,
           isAutoHide: true,
-          message: 'Get list error',
-          status: 'ERROR'
-        })
+          message: "Get list error",
+          status: "ERROR",
+        });
       }
     } catch (error: any) {
       setToastAtom({
         isOpen: true,
         isAutoHide: true,
         message: error.message,
-        status: 'ERROR'
-      })
+        status: "ERROR",
+      });
     } finally {
       setLoadingAtom(false);
     }
-  }
+  };
   const handleProjectAction = (item?: ProjectResponseType) => {
     if (item) {
       setProjectDataAtom(item);
-      setWorkDetailStatus('EDIT')
-      router.push("work/detail/[slug]")
+      setWorkDetailStatus("EDIT");
+      router.push("work/detail/[slug]");
     } else {
-      setWorkDetailStatus('NEW');
-      router.push("work/detail/[slug]")
+      setWorkDetailStatus("NEW");
+      router.push("work/detail/[slug]");
     }
-  }
+  };
   const ButtonAddProjectMemo = useMemo(() => {
     return (
       <>
-        {
-          isLoggedAtom ? <div>
+        {isLoggedAtom ? (
+          <div>
             <ButtonIconComponent
               onClick={() => handleProjectAction()}
-              icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 4.5v15m7.5-7.5h-15"
+                  />
+                </svg>
               }
             />
           </div>
-            : <></>
-        }
+        ) : (
+          <></>
+        )}
       </>
-    )
-  }, [isLoggedAtom])
+    );
+  }, [isLoggedAtom]);
   return (
-    <div className={isMobileAtom ? 'w-full' : 'w-1/2'}>
+    <div className={isMobileAtom ? "w-full" : "w-1/2"}>
       <div className="w-full flex items-center justify-center mb-6 text-center text-lg">
-        Below are a few of my personal projects.Please click on each project for more information.
+        Below are a few of my personal projects.Please click on each project for
+        more information.
       </div>
-      <div className={`w-full py-2 flex ${isLoggedAtom ? "items-center justify-between" : ""}`}>
-        <div className={`flex flex-col justify-center ${isLoggedAtom ? "w-1/2" : "w-full"}`}>
+      <div
+        className={`w-full py-2 flex ${isLoggedAtom ? "items-center justify-between" : ""}`}
+      >
+        <div
+          className={`flex flex-col justify-center ${isLoggedAtom ? "w-1/2" : "w-full"}`}
+        >
           <div>
             <div className="text-xl font-bold">Personal project !!!</div>
             <div className="border-2 rounded-lg w-36 "></div>
@@ -118,21 +139,26 @@ const AboutPage = () => {
         </div>
         {ButtonAddProjectMemo}
       </div>
-      <div className={`grid ${isMobileAtom ? 'grid-cols-1' : 'grid-cols-2'} gap-4 items-center w-full`}>
-        {
-          listProject.length > 0 && listProject.map((project: ProjectResponseType) => {
+      <div
+        className={`grid ${isMobileAtom ? "grid-cols-1" : "grid-cols-2"} gap-4 items-center w-full`}
+      >
+        {listProject.length > 0 &&
+          listProject.map((project: ProjectResponseType) => {
             return (
               <button
                 onClick={() => handleProjectAction(project)}
-
                 key={project._id}
-                className="border rounded-lg w-full flex flex-col h-80 items-center p-2 gap-4">
+                className="border rounded-lg w-full flex flex-col h-80 items-center p-2 gap-4"
+              >
                 <div className="h-[55%] w-1/2">
                   <div className="text-xl text-center py-2">
                     <p className="font-bold">{project.title}</p>
                   </div>
-                  <img src={project.image_preview} alt="img"
-                    className="w-full h-full max-h-[100px] object-cover" />
+                  <img
+                    src={project.image_preview}
+                    alt="img"
+                    className="w-full h-full max-h-[100px] object-cover"
+                  />
                 </div>
                 <div className="h-[40%]">
                   <div>
@@ -140,9 +166,8 @@ const AboutPage = () => {
                   </div>
                 </div>
               </button>
-            )
-          })
-        }
+            );
+          })}
       </div>
     </div>
   );
