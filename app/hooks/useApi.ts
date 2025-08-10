@@ -15,11 +15,12 @@ export function useApi() {
   ) => {
     try {
       const isFormData = body instanceof FormData;
+      // Thêm query t để bypass cache phía client
       const noCacheUrl = `${API_BASE_URL}${endpoint}?t=${Date.now()}`;
 
       const response = await fetch(noCacheUrl, {
         method,
-        cache: "no-store",
+        cache: "no-store", // chặn cache ở client
         headers: isFormData
           ? { "Cache-Control": "no-store" }
           : {
@@ -29,9 +30,10 @@ export function useApi() {
         credentials: "include",
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
       });
+
       if (!response.ok) {
         if (response.status === 401) {
-          router.push("/Pages/login"); // Token hết hạn → login lại
+          router.push("/Pages/login"); // Token hết hạn
           return { error: "Unauthorized" };
         }
 
