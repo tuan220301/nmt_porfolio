@@ -28,6 +28,7 @@ import { SuggestionsTipTap } from "./suggestions_slash_tiptap";
 import { BaseHeadingCus } from "./BaseHeadingCus";
 import CustomImage from "./ImageExtension";
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "@tiptap/extension-link";
 
 type TipTapPropsType = {
   onChangeContent: (content: string) => void;
@@ -63,6 +64,13 @@ const Tiptap = ({ onChangeContent, content, isBorder }: TipTapPropsType) => {
       }),
       Placeholder.configure({
         placeholder: "Press / to see available commands",
+      }),
+      Link.configure({
+        openOnClick: true, // click sẽ mở link
+        autolink: true,
+        HTMLAttributes: {
+          class: "text-blue-500 underline", // style mặc định
+        },
       }),
     ],
     editorProps: {
@@ -190,6 +198,22 @@ const Tiptap = ({ onChangeContent, content, isBorder }: TipTapPropsType) => {
       </button>
     );
   };
+
+  const setLink = () => {
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("Enter URL", previousUrl);
+
+    // Nếu không nhập gì thì bỏ link
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    // Nếu có url thì set link
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
   return (
     <div className="p-2">
       <SlashCmdProvider>
@@ -197,6 +221,9 @@ const Tiptap = ({ onChangeContent, content, isBorder }: TipTapPropsType) => {
           {OptionButton("underline", <p>U</p>)}
           {OptionButton("bold", <p>B</p>)}
           {OptionButton("italic", <p>I</p>)}
+          <button onClick={setLink} className="border rounded-xl h-8 w-10">
+            <p>L</p>
+          </button>
           <div className="flex items-center justify-center">
             <AnimatePresence initial={false}>
               {showColor ? (

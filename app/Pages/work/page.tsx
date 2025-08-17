@@ -139,29 +139,27 @@ const AboutPage = () => {
         </div>
         {ButtonAddProjectMemo}
       </div>
-      <div
-        className={`grid ${isMobileAtom ? "grid-cols-1" : "grid-cols-2"} gap-4 items-center w-full`}
-      >
+      <div className={`w-full flex flex-col gap-4`}>
         {listProject.length > 0 &&
           listProject.map((project: ProjectResponseType) => {
             return (
               <button
                 onClick={() => handleProjectAction(project)}
                 key={project._id}
-                className="border rounded-lg w-full flex flex-col h-80 items-center p-2 gap-4"
+                className="border rounded-lg w-full flex p-2 gap-4"
               >
-                <div className="h-[55%] w-1/2">
-                  <div className="text-xl text-center py-2">
-                    <p className="font-bold">{project.title}</p>
-                  </div>
+                <div className="flex items-center justify-center w-[30%]">
                   <img
                     src={project.image_preview}
                     alt="img"
-                    className="w-full h-full max-h-[100px] object-cover"
+                    className=" object-cover"
                   />
                 </div>
-                <div className="h-[40%]">
-                  <div>
+                <div className="w-[65%]">
+                  <div className="text-left text-xl py-2">
+                    <p className="font-bold">{project.title}</p>
+                  </div>
+                  <div className="text-left">
                     <p>{project.des}</p>
                   </div>
                 </div>

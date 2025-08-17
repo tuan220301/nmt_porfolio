@@ -31,22 +31,36 @@ export const SuggestionsTipTap = createSuggestionsItems([
     title: "Heading 1",
     searchTerms: ["h1", "title"],
     command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run();
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .toggleHeading({ level: 1 })
+        .run();
     },
   },
   {
     title: "Heading 2",
     searchTerms: ["h2", "subtitle"],
     command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run();
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .toggleHeading({ level: 2 })
+        .run();
     },
   },
   {
     title: "Heading 3",
     searchTerms: ["h3", "section"],
     command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run();
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .toggleHeading({ level: 3 })
+        .run();
     },
   },
-
 ]);

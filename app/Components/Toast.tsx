@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { useSetRecoilState } from 'recoil';
-import { ToastAtom } from '../Atom/ToastAtom';
+import React, { useEffect, useState } from "react";
+import { useSetRecoilState } from "recoil";
+import { ToastAtom } from "../Atom/ToastAtom";
 type ToastProps = {
   content: String;
   isOpen: boolean;
   isAutoHide?: boolean;
-  status?: 'INFO' | 'SUCCESS' | 'ERROR' | ''
-}
+  status?: "INFO" | "SUCCESS" | "ERROR" | "";
+};
 const Toast = (props: ToastProps) => {
-  const { content, isOpen, isAutoHide = false, status = 'INFO' } = props;
+  const { content, isOpen, isAutoHide = false, status = "INFO" } = props;
   const setToast = useSetRecoilState(ToastAtom);
   useEffect(() => {
     if (isOpen && isAutoHide) {
@@ -17,7 +17,7 @@ const Toast = (props: ToastProps) => {
           isOpen: false,
           message: "",
           isAutoHide: false,
-          status: ''
+          status: "",
         });
       }, 2000); // Reset tooltip after 2 seconds
 
@@ -38,7 +38,7 @@ const Toast = (props: ToastProps) => {
   };
 
   return (
-    <div className={`${isOpen ? '' : 'hidden'} absolute top-10 right-10`}>
+    <div className={`${isOpen ? "" : "hidden"} absolute bottom-0 right-10`}>
       <div
         id="toast-default"
         className={`flex items-center w-full max-w-xs p-4 rounded-lg shadow text-white ${handleStatus(status)}`}
@@ -51,4 +51,3 @@ const Toast = (props: ToastProps) => {
 };
 
 export default Toast;
-
