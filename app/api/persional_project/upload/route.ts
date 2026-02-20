@@ -17,11 +17,13 @@ export async function POST(req: NextRequest) {
 
       const formData = await req.formData();
       const file = formData.get("image") as File;
-      // Note: projectTitle param removed per Bugs.md - using direct S3 upload without folder structure
+      const projectTitle = formData.get("projectTitle") as string | null;
 
       console.log(`📦 [upload/route.ts] FormData received:`, {
-        fileName: file?.name || 'undefined',
-        fileSize: file ? (file.size / 1024).toFixed(2) + ' KB' : 'undefined',
+        fileName: file?.name || "undefined",
+        fileSize: file ? (file.size / 1024).toFixed(2) + " KB" : "undefined",
+        projectTitle: projectTitle || "NOT PROVIDED",
+        formDataKeys: Array.from(formData.keys()),
       });
 
       if (!file) {
@@ -36,14 +38,15 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        console.log(`\n📤 [upload/route.ts] Processing upload...`);
+        console.log(`📤 [upload/route.ts] Processing upload...`);
         console.log(`   File name: ${file.name}`);
         console.log(`   File size: ${(file.size / 1024).toFixed(2)}KB`);
-        console.log(`   ProjectTitle: "${projectTitle}"`);
+        console.log(`   ProjectTitle: "${projectTitle || "NOT PROVIDED"}"`);
 
-        const fileKey = generateFileKey(file.name);
+        const fileKey = generateFileKey(file.name, projectTitle || undefined);
         console.log(`✅ [upload/route.ts] File key generated:`, {
           fileKey: fileKey,
+          usedProjectTitle: !!projectTitle,
         });
 
         console.log(`📤 [upload/route.ts] Calling uploadImageToS3...`);

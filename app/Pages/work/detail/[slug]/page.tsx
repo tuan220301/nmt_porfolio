@@ -94,7 +94,7 @@ const DetailProject = () => {
       console.log(`- Description: ${des}`);
       console.log(`- Content blocks: ${blocks.length}`);
       console.log(`- Preview image: ${image instanceof File ? 'New file' : image}`);
-      
+
       // Log detailed block information
       console.log(`\n📦 [DetailProject.handleSave] Block contents to save:`);
       blocks.forEach((block, idx) => {
@@ -105,7 +105,7 @@ const DetailProject = () => {
           hasContent: block.content !== '<p></p>' && block.content !== '',
           preview: block.content.substring(0, 80),
         });
-        
+
         // Log image URLs in this block
         if (imageCount > 0) {
           const imageUrls = block.content.match(/src=["']([^"']+)["']/g) || [];
@@ -236,6 +236,18 @@ const DetailProject = () => {
   }, [image, workPageStatus]);
 
   const EditorMemo = useMemo(() => {
+    console.log(`\n📋 [DetailProject.EditorMemo] Rendering MultiBlockEditor with:`, {
+      projectTitle: title || "EMPTY",
+      projectTitleTrimmed: title?.trim() || "EMPTY",
+      projectTitleLength: title?.length || 0,
+      isEdit,
+      blockCount: blocks.length,
+    });
+
+    if (!title || title.trim() === '') {
+      console.warn(`⚠️ [DetailProject.EditorMemo] WARNING: title is empty! Images will be stored without project folder organization`);
+    }
+
     return (
       <div>
         <div className="font-bold text-lg px-2 mb-2">Content Blocks</div>

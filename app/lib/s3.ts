@@ -37,18 +37,74 @@ if (
     });
 }
 
-const s3Client = new S3Client({
-    region: "auto",
-    endpoint: CLOUDFLARE_R2_URL,
-    credentials: {
-        accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
-        secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
-    },
-    maxAttempts: 3,
-    requestHandler: {
-        requestTimeout: 60000, // 60 giây timeout
-    },
-});
+// Create S3 client with optimized configuration for Cloudflare R2
+// This prevents "ssl/tls alert bad record mac" errors
+// Strategy: Create new client for each request + disable connection pooling
+const createS3Client = () => {
+    const http = require("http");
+    const https = require("https");
+
+    const clientConfig: any = {
+        region: "auto",
+        endpoint: CLOUDFLARE_R2_URL,
+        credentials: {
+            accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
+            secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
+        },
+        // Minimal retry at SDK level, we handle retry manually
+        maxAttempts: 1,
+        // Disable keep-alive to prevent "bad record mac" SSL errors
+        httpAgent: new http.Agent({ keepAlive: false, maxSockets: 1 }),
+        httpsAgent: new https.Agent({ keepAlive: false, maxSockets: 1 }),
+    };
+
+    const client = new S3Client(clientConfig);
+    return client;
+};
+
+// Create new client per operation to avoid connection pooling issues
+const getS3Client = () => createS3Client();
+
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    maxAttempts: number = 3,
+    initialDelayMs: number = 1000,
+): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            console.log(`\n⏮️ [retryWithBackoff] Attempt ${attempt}/${maxAttempts}`);
+            const result = await fn();
+            return result;
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            const errorMsg = lastError.message;
+
+            console.error(`\n❌ [retryWithBackoff] Attempt ${attempt} failed:`, {
+                message: errorMsg,
+                code: (error as any)?.code || 'UNKNOWN',
+            });
+
+            // If this is the last attempt, throw
+            if (attempt === maxAttempts) {
+                console.log(`${'═'.repeat(70)}`);
+                console.error(`❌ [retryWithBackoff] All ${maxAttempts} attempts failed!`);
+                console.log(`${'═'.repeat(70)}\n`);
+                throw new Error(`Failed after ${maxAttempts} attempts: ${errorMsg}`);
+            }
+
+            // Calculate exponential backoff: 2s, 4s, 8s (increased delays for R2 stability)
+            const delay = initialDelayMs * Math.pow(2, attempt - 1);
+            console.log(`⏳ [retryWithBackoff] Waiting ${delay}ms before retry... (Attempt ${attempt + 1}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    // Should not reach here
+    throw lastError || new Error("Unknown error in retryWithBackoff");
+}
 
 export const uploadImageToS3 = async (
     file: File,
@@ -87,10 +143,10 @@ export const uploadImageToS3 = async (
                 const compressResult = await compressImageServer(buffer, file.name);
                 const compressedBuffer = compressResult.buffer;
                 buffer = compressedBuffer;
-                
+
                 const compressionDuration = ((Date.now() - compressionStartTime) / 1000).toFixed(2);
                 const reduction = (((originalBufferSize - buffer.length) / originalBufferSize) * 100).toFixed(1);
-                
+
                 console.log(`✅ [uploadImageToS3] Compression successful (${compressionDuration}s):`, {
                     originalSizeMB: (originalBufferSize / 1024 / 1024).toFixed(2),
                     compressedSizeMB: (buffer.length / 1024 / 1024).toFixed(2),
@@ -118,7 +174,7 @@ export const uploadImageToS3 = async (
             Body: buffer,
             ContentType: file.type || 'image/jpeg',
         });
-        
+
         console.log(`✅ [uploadImageToS3] PutObjectCommand created:`, {
             commandType: 'PutObjectCommand',
             bucket: CLOUDFLARE_BUCKET_NAME,
@@ -127,32 +183,45 @@ export const uploadImageToS3 = async (
             contentType: file.type || 'image/jpeg',
         });
 
-        // 6. S3 SEND: log timing, response
-        console.log(`\n🚀 [uploadImageToS3] Sending to S3/R2...`);
+        // 6. S3 SEND with RETRY: log timing, response
+        console.log(`\n🚀 [uploadImageToS3] Sending to S3/R2 with automatic retry...`);
         console.log(`   Bucket: ${CLOUDFLARE_BUCKET_NAME}`);
         console.log(`   Key: ${fileKey}`);
         console.log(`   Size: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
-        
-        const sendStartTime = Date.now();
-        let sendResult;
-        try {
-          sendResult = await s3Client.send(command);
-        } catch (sendError) {
-          console.error(`❌ [uploadImageToS3] S3 send FAILED:`, sendError);
-          throw sendError;
-        }
-        const sendDuration = ((Date.now() - sendStartTime) / 1000).toFixed(2);
-        
-        console.log(`✅ [uploadImageToS3] S3 send successful (${sendDuration}s):`, {
+        console.log(`   Max Retries: 3`);
+
+        // Use retry helper for S3 send operation
+        const sendResult = await retryWithBackoff(
+            async () => {
+                const sendStartTime = Date.now();
+                let sendResult;
+                try {
+                    const client = getS3Client(); // Create fresh client for this request
+                    sendResult = await client.send(command);
+                } catch (sendError) {
+                    const sendDuration = ((Date.now() - sendStartTime) / 1000).toFixed(2);
+                    console.error(`❌ [uploadImageToS3] S3 send FAILED (${sendDuration}s):`, sendError);
+                    throw sendError;
+                }
+
+                const sendDuration = ((Date.now() - sendStartTime) / 1000).toFixed(2);
+                console.log(`✅ [uploadImageToS3] S3 send successful (${sendDuration}s)`);
+                return sendResult;
+            },
+            3,
+            3000  // Increased from 2000ms to 3000ms
+        );
+
+        console.log(`✅ [uploadImageToS3] S3 send successful:`, {
             httpStatusCode: sendResult.$metadata?.httpStatusCode,
             requestId: sendResult.$metadata?.requestId ? '✓ (exists)' : '✗ (missing)',
-            attempt: 'sent successfully',
+            attempt: 'completed with retries',
         });
 
         // 7. PUBLIC URL: log URL generation
         console.log(`\n🔗 [uploadImageToS3] Generating public URL...`);
         const publicUrl = `${CLOUDFLARE_PUBLIC_URL}/${fileKey}`;
-        
+
         console.log(`✅ [uploadImageToS3] Public URL generated:`, {
             baseUrl: CLOUDFLARE_PUBLIC_URL,
             fileKey: fileKey,
@@ -179,13 +248,13 @@ export const uploadImageToS3 = async (
         // 8. ERROR HANDLING: detailed logging
         const errorMsg = error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : 'N/A';
-        
+
         console.error(`\n❌ [uploadImageToS3] ERROR:`, {
             message: errorMsg,
             type: error instanceof Error ? error.name : typeof error,
             stack: errorStack,
         });
-        
+
         console.log(`${'═'.repeat(70)}\n`);
         throw new Error("Failed to upload image to S3: " + errorMsg);
     }
@@ -226,7 +295,7 @@ export const batchUploadToS3 = async (
         console.log(`✅ [batchUploadToS3] All ${results.length} files uploaded in ${duration}s`);
         console.log(`📋 [batchUploadToS3] URLs:`, results);
         console.log(`${'═'.repeat(70)}\n`);
-        
+
         return results;
     } catch (error) {
         console.error('❌ [batchUploadToS3] Batch upload failed:', error);
@@ -262,7 +331,8 @@ export const deleteImageFromS3 = async (fileKey: string): Promise<void> => {
         });
 
         const deleteStart = Date.now();
-        await s3Client.send(command);
+        const client = getS3Client();
+        await client.send(command);
         const deleteDuration = ((Date.now() - deleteStart) / 1000).toFixed(2);
 
         console.log(`✅ [deleteImageFromS3] Successfully deleted (${deleteDuration}s):`, {
@@ -293,7 +363,8 @@ export const deleteImagesFromFolder = async (folderPath: string): Promise<void> 
 
         console.log(`📋 [deleteImagesFromFolder] Listing objects in folder...`);
         const listStartTime = Date.now();
-        const listResponse = await s3Client.send(listCommand);
+        const listClient = getS3Client();
+        const listResponse = await listClient.send(listCommand);
         const listDuration = ((Date.now() - listStartTime) / 1000).toFixed(2);
 
         if (!listResponse.Contents || listResponse.Contents.length === 0) {
@@ -309,14 +380,15 @@ export const deleteImagesFromFolder = async (folderPath: string): Promise<void> 
         // Delete each object
         console.log(`🗑️ [deleteImagesFromFolder] Deleting ${listResponse.Contents.length} objects...`);
         const deleteStartTime = Date.now();
-        const deletePromises = listResponse.Contents.map((obj) =>
-            s3Client.send(
+        const deletePromises = listResponse.Contents.map((obj) => {
+            const deleteClient = getS3Client();
+            return deleteClient.send(
                 new DeleteObjectCommand({
                     Bucket: CLOUDFLARE_BUCKET_NAME,
                     Key: obj.Key!,
                 })
-            )
-        );
+            );
+        });
 
         await Promise.all(deletePromises);
         const deleteDuration = ((Date.now() - deleteStartTime) / 1000).toFixed(2);
@@ -343,7 +415,7 @@ export const getImageFromS3 = async (fileKey: string): Promise<Buffer> => {
             Key: key,
         });
 
-        const response = await s3Client.send(command);
+        const response = await getS3Client().send(command);
 
         if (!response.Body) {
             throw new Error("No body in response");
@@ -373,8 +445,8 @@ export const getImageFromS3 = async (fileKey: string): Promise<Buffer> => {
     }
 };
 
-// Generate a unique file key with timestamp (simplified - no folder structure per Bugs.md)
-export const generateFileKey = (fileName: string): string => {
+// Generate a unique file key with timestamp and optional project folder
+export const generateFileKey = (fileName: string, projectTitle?: string): string => {
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
     const nameWithoutExt = fileName.split(".").slice(0, -1).join(".");
@@ -382,16 +454,37 @@ export const generateFileKey = (fileName: string): string => {
 
     console.log(`\n🔑 [generateFileKey] Generating file key:`, {
         fileName,
+        projectTitle: projectTitle || "NOT PROVIDED",
         timestamp,
         randomString,
         extension: ext,
-        note: 'Direct upload (no folder structure per Bugs.md)',
     });
 
-    // Direct upload without project folder
-    const fileKey = `uploads/${timestamp}_${randomString}_${nameWithoutExt}.${ext}`;
-    console.log(`✅ [generateFileKey] Generated file key:`, {
-        fileKey,
-    });
+    // Create file key with optional project folder structure
+    let fileKey: string;
+    if (projectTitle) {
+        // Sanitize project title: replace spaces with underscore, remove other special chars
+        const sanitizedTitle = projectTitle
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-zA-Z0-9-_]/g, '')
+            .toLowerCase();
+
+        // With project folder structure
+        fileKey = `uploads/${sanitizedTitle}/${timestamp}_${randomString}_${nameWithoutExt}.${ext}`;
+        console.log(`✅ [generateFileKey] Generated file key WITH project folder:`, {
+            fileKey,
+            projectFolder: sanitizedTitle,
+            originalTitle: projectTitle,
+        });
+    } else {
+        // Direct upload without project folder
+        fileKey = `uploads/${timestamp}_${randomString}_${nameWithoutExt}.${ext}`;
+        console.log(`✅ [generateFileKey] Generated file key WITHOUT project folder:`, {
+            fileKey,
+            note: 'Direct upload (projectTitle not provided)',
+        });
+    }
+
     return fileKey;
 };

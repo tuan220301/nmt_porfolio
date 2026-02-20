@@ -1,41 +1,21 @@
 "use client";
-import {
-  useEditor,
-  EditorContent,
-  BubbleMenu,
-  FloatingMenu,
-} from "@tiptap/react";
-import {
-  Bold,
-  Italic,
-  Underline,
-  Document,
-  Paragraph,
-  Text,
-  BulletList,
-  OrderedList,
-  ListItem,
-  Link,
-  Color,
-  Placeholder,
-  Image,
-  Dropcursor,
-  TextStyle,
-} from "@tiptap/extension-starter-kit";
-import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { enableKeyboardNavigation } from "./SelectionMenu";
-import {
-  Slash,
-} from "@harshtalks/slash-tiptap";
+import React, { useState, useCallback, useEffect } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Color from "@tiptap/extension-color";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import TextStyle from "@tiptap/extension-text-style";
+import Placeholder from "@tiptap/extension-placeholder";
+import { SlashCmdProvider, SlashCmd, Slash } from "@harshtalks/slash-tiptap";
+import { AnimatePresence, motion } from "framer-motion";
 
 import "./style.css";
 import { SuggestionsTipTap } from "./suggestions_slash_tiptap";
 import { BaseHeadingCus } from "./BaseHeadingCus";
 import CustomImage from "./ImageExtension";
-import { AnimatePresence, motion } from "framer-motion";
-import LinkExtension from "@tiptap/extension-link";
 
-type TipTapPropsType = {
+type TiptapProps = {
   onChangeContent: (content: string) => void;
   content: string;
   isBorder?: boolean;
@@ -45,44 +25,56 @@ type TipTapPropsType = {
   projectTitle?: string;
 };
 
-const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive, projectTitle }: TipTapPropsType) => {
+const Tiptap = ({
+  onChangeContent,
+  content,
+  isBorder = false,
+  onFocus,
+  onBlur,
+  isActive = false,
+  projectTitle,
+}: TiptapProps) => {
   const [showColor, setShowColor] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadingProgress, setUploadingProgress] = useState<string>('');
+  const [uploadingProgress, setUploadingProgress] = useState<string>("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  console.log(`\n📋 [Tiptap] Component rendered`, {
+  // Debug props on every render
+  console.log(`\n📋 [Tiptap.render] Component rendered with props:`, {
     isBorder,
     isActive,
-    projectTitle,
-    fileInputRefExists: !!fileInputRef.current,
-    editorEditable: isBorder ?? false,
-    isUploading,
-  });
-
-  console.log(`\n📋 [Tiptap] Toolbar visibility:`, {
-    isActive,
-    toolbarVisible: isActive === true,
-    reason: !isActive ? `isActive is ${isActive}, toolbar hidden` : 'isActive is true, toolbar should be visible',
+    projectTitle: projectTitle || "NOT PROVIDED",
+    projectTitleType: typeof projectTitle,
+    projectTitleExists: !!projectTitle,
+    projectTitleLength: projectTitle?.length || 0,
+    editorReady: !!useEditor ? "yes" : "no",
   });
 
   const editor = useEditor({
-    editable: isBorder ?? false,
+    editable: isBorder,
     extensions: [
-      Document,
-      Paragraph,
-      Text,
-      BulletList.configure({ HTMLAttributes: { class: "list-disc pl-4" } }),
-      OrderedList.configure({ HTMLAttributes: { class: "list-decimal pl-4" } }),
-      Bold,
-      Italic,
-      TextStyle,
-      BaseHeadingCus,
-      Underline,
-      Color,
-      Image,
-      Dropcursor,
-      ListItem,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      Image.configure({
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "max-w-full h-auto rounded-lg",
+        },
+      }),
+      Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+      }),
+      Color.configure({
+        types: ["textStyle"],
+      }),
+      TextStyle.configure(),
       CustomImage,
       Slash.configure({
         suggestion: {
@@ -92,97 +84,57 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
       Placeholder.configure({
         placeholder: "Press / to see available commands",
       }),
-      LinkExtension.configure({
-        openOnClick: true,
-        autolink: true,
-        HTMLAttributes: {
-          class: "text-blue-500 underline",
-        },
-      }),
     ],
     editorProps: {
       handleDOMEvents: {
         focus: () => {
-          onFocus?.();
-          return false;
-        },
-        blur: () => {
-          onBlur?.();
-          return false;
-        },
-      },
-    },
-    content: content,
-    onUpdate: ({ editor }) => {
-      const htmlContent = editor.getHTML();
-      const imageRegex = /<img[^>]+src=["']([^"']+)["']/g;
-      const imageUrls: string[] = [];
-      let match;
-      while ((match = imageRegex.exec(htmlContent)) !== null) {
-        imageUrls.push(match[1]);
-      }
-      
-      console.log(`📝 [Tiptap.onUpdate] Content changed. HTML length: ${htmlContent.length}`);
-      console.log(`📝 [Tiptap.onUpdate] Images detected: ${imageUrls.length}`);
-      if (imageUrls.length > 0) {
-        console.log(`   Image URLs:`, imageUrls.map(url => url.substring(0, 80) + '...'));
-      }
-      onChangeContent(htmlContent);
-    },
-  });
-    ],
-    editorProps: {
-      handleDOMEvents: {
-        keydown: (_, v) => enableKeyboardNavigation(v),
-        focus: () => {
-          console.log(`🔍 [Tiptap.onFocus] Editor focused`);
           onFocus?.();
           return false;
         },
         blur: (view) => {
           // Don't blur if image upload is in progress
           if (isUploading) {
-            console.log(`⏸️ [Tiptap.onBlur] BLOCKED - image upload in progress (isUploading=${isUploading})`);
-            return true; // IMPORTANT: return true to stop propagation and prevent blur
+            console.log(`🛑 [Tiptap.blur] Prevented blur during upload`);
+            return true; // IMPORTANT: return true to stop propagation
           }
-          
+
           // Check if blur was caused by clicking file input button
           const activeElement = document.activeElement;
-          if (activeElement?.tagName === 'INPUT' && (activeElement as HTMLInputElement).type === 'file') {
-            console.log(`⏸️ [Tiptap.onBlur] BLOCKED - focus moved to file input, file selection in progress`);
+          if (
+            activeElement?.tagName === "INPUT" &&
+            (activeElement as HTMLInputElement).type === "file"
+          ) {
+            console.log(`🛑 [Tiptap.blur] File input focused - preventing blur`);
             return true; // IMPORTANT: return true to stop and prevent blur
           }
-          
-          // If we reach here, allow blur to proceed normally
-          console.log(`🔍 [Tiptap.onBlur] Blur allowed - calling parent onBlur callback`);
-          // Use immediate call instead of setTimeout to be more responsive
+
           onBlur?.();
           return false;
         },
       },
       attributes: {
         class:
-          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none dark:prose-invert",
       },
     },
     content: content,
     onUpdate: ({ editor }) => {
       const htmlContent = editor.getHTML();
-      // Extract image URLs for logging
       const imageRegex = /<img[^>]+src=["']([^"']+)["']/g;
       const imageUrls: string[] = [];
       let match;
       while ((match = imageRegex.exec(htmlContent)) !== null) {
         imageUrls.push(match[1]);
       }
-      
-      console.log(`📝 [Tiptap.onUpdate] Content changed. HTML length: ${htmlContent.length}`);
+
+      console.log(`\n📝 [Tiptap.onUpdate] Content changed. HTML length: ${htmlContent.length}`);
       console.log(`📝 [Tiptap.onUpdate] Images detected: ${imageUrls.length}`);
       if (imageUrls.length > 0) {
-        console.log(`   Image URLs:`, imageUrls);
+        console.log(`   📸 Image URLs:`, imageUrls);
       }
-      console.log(`📝 [Tiptap.onUpdate] Full HTML content:`, htmlContent);
-      onChangeContent(htmlContent); // Cập nhật state bên ngoài khi thay đổi nội dung
+      console.log(`   Preview: ${htmlContent.substring(0, 100)}...`);
+      console.log(`📝 [Tiptap.onUpdate] Calling parent onChangeContent callback\n`);
+      onChangeContent(htmlContent);
     },
   });
 
@@ -195,47 +147,95 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
       }
 
       const file = files[0];
-      console.log(`\n${'═'.repeat(70)}`);
+      console.log(`\n${"═".repeat(70)}`);
       console.log(`🎯 [Tiptap.handleImageUpload] IMAGE UPLOAD STARTED`);
-      console.log(`${'═'.repeat(70)}`);
+      console.log(`${"═".repeat(70)}`);
       console.log(`📸 [Tiptap.handleImageUpload] File details:`, {
         name: file.name,
-        size: (file.size / 1024).toFixed(2) + ' KB',
+        size: (file.size / 1024).toFixed(2) + " KB",
         type: file.type,
+        lastModified: new Date(file.lastModified).toISOString(),
       });
 
+      console.log(`📋 [Tiptap.handleImageUpload] Context:`, {
+        projectTitle: projectTitle || "NOT PROVIDED",
+        projectTitleExists: !!projectTitle,
+        projectTitleIsString: typeof projectTitle === 'string',
+        projectTitleLength: projectTitle?.length || 0,
+        editorExists: !!editor,
+        isUploading,
+      });
+
+      // Validate and prepare projectTitle - use fallback if empty
+      const finalProjectTitle = (projectTitle && projectTitle.trim() !== '')
+        ? projectTitle.trim()
+        : 'Untitled';
+
+      if (!projectTitle || projectTitle.trim() === '') {
+        console.warn(`⚠️ [Tiptap.handleImageUpload] WARNING: projectTitle is empty - using fallback "${finalProjectTitle}"`);
+      } else {
+        console.log(`✅ [Tiptap.handleImageUpload] projectTitle is valid: "${finalProjectTitle}"`);
+      }
+
       setIsUploading(true);
-      setUploadingProgress('Uploading...');
+      setUploadingProgress("Uploading...");
 
       try {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append("image", file);
+        // Always append project title for S3 folder organization (uses fallback if empty)
+        formData.append("projectTitle", finalProjectTitle);
+        console.log(`   ✅ Added projectTitle to FormData: "${finalProjectTitle}"`);
 
         console.log(`📤 [Tiptap.handleImageUpload] Sending to /api/persional_project/upload`);
+        console.log(`   FormData contents:`, {
+          hasImage: formData.has("image"),
+          imageFileName: (formData.get("image") as File)?.name || "N/A",
+          hasProjectTitle: formData.has("projectTitle"),
+          projectTitleValue: formData.get("projectTitle") || "NOT SET",
+          allKeys: Array.from(formData.keys()),
+        });
         const uploadStartTime = Date.now();
 
-        const response = await fetch('/api/persional_project/upload', {
-          method: 'POST',
+        const response = await fetch("/api/persional_project/upload", {
+          method: "POST",
           body: formData,
         });
 
-        const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(2);
+        const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(
+          2
+        );
+
+        console.log(
+          `📊 [Tiptap.handleImageUpload] Response received (${uploadDuration}s):`,
+          {
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText,
+          }
+        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+          console.error(
+            `❌ [Tiptap.handleImageUpload] HTTP Error:`,
+            errorData
+          );
+          throw new Error(
+            errorData.message || `Upload failed with status ${response.status}`
+          );
         }
 
         const data = await response.json();
-        console.log(`✅ [Tiptap.handleImageUpload] API Response received (${uploadDuration}s):`, {
+        console.log(`✅ [Tiptap.handleImageUpload] API Response:`, {
           isSuccess: data.isSuccess,
           message: data.message,
           hasData: !!data.data,
-          dataLength: data.data?.length || 0,
+          imageUrl: data.data?.substring(0, 80),
         });
 
         if (!data.isSuccess || !data.data) {
-          throw new Error(data.message || 'Upload unsuccessful');
+          throw new Error(data.message || "Upload unsuccessful");
         }
 
         const imageUrl = data.data;
@@ -243,33 +243,33 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
         console.log(`📝 [Tiptap.handleImageUpload] Inserting image into editor`);
         if (editor) {
-          editor
-            .chain()
-            .focus()
-            .setImage({ src: imageUrl })
-            .run();
-          console.log(`✅ [Tiptap.handleImageUpload] Image inserted successfully into editor`);
+          editor.chain().focus().setImage({ src: imageUrl }).run();
+          console.log(`✅ [Tiptap.handleImageUpload] Image inserted into Tiptap editor`);
+        } else {
+          console.error(
+            `❌ [Tiptap.handleImageUpload] Editor instance not available`
+          );
         }
 
-        console.log(`${'═'.repeat(70)}`);
+        console.log(`${"═".repeat(70)}`);
         console.log(`✅ [Tiptap.handleImageUpload] UPLOAD COMPLETE`);
-        console.log(`${'═'.repeat(70)}\n`);
+        console.log(`${"═".repeat(70)}\n`);
 
-        setUploadingProgress('Done');
+        setUploadingProgress("Done");
         setTimeout(() => {
           setIsUploading(false);
-          setUploadingProgress('');
+          setUploadingProgress("");
           if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            fileInputRef.current.value = "";
           }
         }, 800);
-
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Upload failed';
-        console.error(`❌ [Tiptap.handleImageUpload] Error:`, message);
-        console.log(`${'═'.repeat(70)}\n`);
+        const message =
+          error instanceof Error ? error.message : "Upload failed";
+        console.error(`❌ [Tiptap.handleImageUpload] Error:`, error);
+        console.log(`${"═".repeat(70)}\n`);
         setIsUploading(false);
-        setUploadingProgress('');
+        setUploadingProgress("");
         alert(`Image upload failed: ${message}`);
       }
     },
@@ -278,7 +278,7 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(isBorder ? true : false);
+    editor.setEditable(isBorder);
   }, [isBorder, editor]);
 
   useEffect(() => {
@@ -286,102 +286,96 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
     // Only update if content actually changed to avoid unnecessary re-renders
     const currentContent = editor.getHTML();
-    if (content && content !== currentContent && content !== '<p></p>') {
+    if (content && content !== currentContent && content !== "<p></p>") {
       editor.commands.setContent(content, false);
     }
   }, [content, editor]);
-
-  const CheckForBoldWhenActive = (item: any) => {
-    const isActive =
-      (item.title === "Bold" && editor?.isActive("bold")) ||
-      (item.title === "Italic" && editor?.isActive("italic")) ||
-      (item.title === "Underline" && editor?.isActive("underline"));
-
-    return (
-      <p className={`hover:font-bold ${isActive ? "italic" : ""}`}>
-        {item.title}
-      </p>
-    );
-  };
 
   if (!editor) {
     return null;
   }
 
-  const isSelected = (format: "bold" | "italic" | "underline") => {
-    if (editor) {
-      editor.chain().focus();
-      if (editor.isActive(format)) {
-        // Nếu đang được chọn thì bỏ định dạng
-        editor.chain().unsetMark(format).run();
-      } else {
-        // Nếu chưa được chọn thì áp dụng định dạng
-        editor.chain().setMark(format).run();
-      }
+  // Format button handler
+  const toggleFormat = (format: "bold" | "italic" | "underline") => {
+    editor.chain().focus();
+    if (editor.isActive(format)) {
+      editor.chain().toggleMark(format).run();
+    } else {
+      editor.chain().setMark(format).run();
     }
   };
 
-  const OptionButton = (
-    nameActive: "bold" | "italic" | "underline",
-    children: React.ReactNode,
+  // Check if format is active
+  const isFormatActive = (format: "bold" | "italic" | "underline") => {
+    return editor.isActive(format);
+  };
+
+  // Format button component
+  const FormatButton = (
+    format: "bold" | "italic" | "underline",
+    icon: string,
+    label: string
   ) => {
-    const isActive = editor.isActive(nameActive);
+    const active = isFormatActive(format);
     return (
       <button
-        className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isActive
+        className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${active
           ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
           : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
-        onClick={() => isSelected(nameActive)}
-        title={nameActive.charAt(0).toUpperCase() + nameActive.slice(1)}
+        onClick={() => toggleFormat(format)}
+        title={label}
       >
-        {children}
+        {icon}
       </button>
     );
   };
 
-  const ButtonColor = (name: string, color: string) => {
+  // Color button component
+  const ColorButton = (name: string, color: string) => {
+    const active = editor.isActive("textStyle", { color: color });
     return (
       <button
         onClick={() => editor.chain().focus().setColor(color).run()}
-        className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${editor.isActive("textStyle", { color: color }) ? "border-gray-800 dark:border-gray-200 ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-gray-400 dark:ring-gray-600" : "border-gray-300 dark:border-gray-600 hover:border-gray-500"}`}
+        className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${active
+          ? "border-gray-800 dark:border-gray-200 ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-gray-400 dark:ring-gray-600"
+          : "border-gray-300 dark:border-gray-600 hover:border-gray-500"
+          }`}
         style={{ backgroundColor: color }}
         title={name}
       />
     );
   };
 
-  const setLink = () => {
+  // Set link handler
+  const handleSetLink = () => {
     const previousUrl = editor.getAttributes("link").href;
     const url = window.prompt("Enter URL", previousUrl);
 
-    // Nếu không nhập gì thì bỏ link
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
 
-    // Nếu có url thì set link
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
-  if (!editor) return null;
   return (
     <div className="p-3 space-y-3">
       <SlashCmdProvider>
-        {/* Toolbar - only show when editor is focused/active */}
-        {isActive && (
-          <div className="flex items-center gap-1.5 px-2 py-2 bg-gray-50 dark:bg-black rounded-lg border border-gray-200 dark:border-gray-800">
+        {/* Toolbar - show when editor is active/focused or when in edit mode (isBorder) */}
+        {(isActive || isBorder) && (
+          <div className="flex items-center gap-1.5 px-2 py-2 bg-gray-50 dark:bg-black rounded-lg border border-gray-200 dark:border-gray-800 flex-wrap">
             {/* Text Formatting Group */}
             <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-700">
-              {OptionButton("bold", <p className="text-sm font-semibold">B</p>)}
-              {OptionButton("italic", <p className="text-sm italic">I</p>)}
-              {OptionButton("underline", <p className="text-sm underline">U</p>)}
+              {FormatButton("bold", "B", "Bold")}
+              {FormatButton("italic", "I", "Italic")}
+              {FormatButton("underline", "U", "Underline")}
             </div>
 
             {/* Link Button */}
             <button
-              onClick={setLink}
+              onClick={handleSetLink}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
               title="Add Link"
             >
@@ -395,55 +389,82 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
             <button
               className="p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               disabled={isUploading}
-              title={isUploading ? `Uploading... ${uploadingProgress}` : "Upload Image"}
+              title={
+                isUploading
+                  ? `Uploading... ${uploadingProgress}`
+                  : "Upload Image"
+              }
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 console.log(`\n🖱️ [Tiptap.ImageButton] onClick triggered`);
+                console.log(`   Timestamp: ${new Date().toISOString()}`);
                 console.log(`   Button state:`, {
                   isUploading,
                   uploadingProgress,
                   fileInputRefExists: !!fileInputRef.current,
+                  projectTitle: projectTitle || "NOT PROVIDED",
+                  editorExists: !!editor,
+                  isBorder,
+                  isActive,
                 });
-                
+
                 if (!isUploading && fileInputRef.current) {
                   console.log(`   ✅ Calling fileInputRef.current.click()`);
                   fileInputRef.current.click();
                   console.log(`   ✅ File picker should open now`);
                 } else if (isUploading) {
-                  console.warn(`   ⚠️ Cannot upload - already uploading. Wait for current upload to complete.`);
+                  console.warn(
+                    `   ⚠️ Cannot upload - already uploading. Wait for current upload to complete.`
+                  );
                 } else {
-                  console.error(`   ❌ fileInputRef.current is NULL - file input element not found!`);
+                  console.error(
+                    `   ❌ fileInputRef.current is NULL - file input element not found!`
+                  );
                 }
               }}
             >
-              <label className="cursor-pointer inline-flex items-center justify-center">
+              <label className="cursor-pointer inline-flex items-center justify-center pointer-events-none">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
+                  tabIndex={-1}
                   ref={fileInputRef}
                 />
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-                  <path d="M.5 1a.5.5 0 0 0-.5.5v12a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-12a.5.5 0 0 0-.5-.5H.5ZM1 12.5v-11h14v11H1Z" />
-                  <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
-                </svg>
-              </label>
-              }}
-            >
-              {isUploading ? (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 animate-spin">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+                {isUploading ? (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-5 h-5 animate-spin"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                    <span className="text-xs font-medium">
+                      {uploadingProgress || "Uploading..."}
+                    </span>
+                  </>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
+                    <path d="M1 13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2l-3.86-3.86a1 1 0 0 0-1.41 0L7 9.67l-2.22-2.22a1 1 0 0 0-1.41 0L1 10.33v2.67Z" />
+                    <circle cx="12.5" cy="4.5" r="1.5" />
                   </svg>
-                  <span className="text-xs font-medium">{uploadingProgress || 'Uploading...'}</span>
-                </>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-                  <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
-                  <path d="M1 13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2l-3.86-3.86a1 1 0 0 0-1.41 0L7 9.67l-2.22-2.22a1 1 0 0 0-1.41 0L1 10.33v2.67Z" />
-                  <circle cx="12.5" cy="4.5" r="1.5" />
-                </svg>
+                )}
               </label>
             </button>
 
@@ -479,16 +500,16 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
             >
               {/* Color Options */}
               <div className="flex items-center gap-2">
-                {ButtonColor("Red", "#F98181")}
-                {ButtonColor("Yellow", "#FAF594")}
-                {ButtonColor("Orange", "#FBBC88")}
-                {ButtonColor("Purple", "#958DF1")}
+                {ColorButton("Red", "#F98181")}
+                {ColorButton("Yellow", "#FAF594")}
+                {ColorButton("Orange", "#FBBC88")}
+                {ColorButton("Purple", "#958DF1")}
               </div>
 
               {/* Divider */}
               <div className="h-5 w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Unset Button */}
+              {/* Unset Color Button */}
               <button
                 onClick={() => editor.chain().focus().unsetColor().run()}
                 className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
@@ -503,7 +524,12 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
                 className="ml-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                 title="Close color picker"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  className="size-4"
+                >
                   <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
                 </svg>
               </button>
@@ -511,33 +537,38 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
           ) : null}
         </AnimatePresence>
 
-        <div className={`rounded-lg mt-3 p-3 transition-all ${isBorder ? "border-2 border-blue-400 dark:border-blue-600" : ""}`}>
-          <EditorContent editor={editor} className="prose prose-sm dark:prose-invert max-w-none" />
+        {/* Editor Content */}
+        <div
+          className={`rounded-lg mt-3 p-3 transition-all ${isBorder ? "border-2 border-blue-400 dark:border-blue-600" : ""
+            }`}
+        >
+          <EditorContent
+            editor={editor}
+            className="prose prose-sm dark:prose-invert max-w-none"
+          />
         </div>
 
+        {/* Slash Commands */}
         <SlashCmd.Root editor={editor}>
           <SlashCmd.Cmd>
             <SlashCmd.Empty>No commands available</SlashCmd.Empty>
             <SlashCmd.List className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-900 shadow-lg max-h-64 overflow-y-auto">
-              {SuggestionsTipTap.map((item) => {
-                return (
-                  <SlashCmd.Item
-                    value={item.title}
-                    onCommand={(val) => {
-                      item.command(val);
-                    }}
-                    key={item.title}
-                    className="rounded px-2 py-1.5 mb-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                  >
-                    {CheckForBoldWhenActive(item)}
-                  </SlashCmd.Item>
-                );
-              })}
+              {SuggestionsTipTap.map((item) => (
+                <SlashCmd.Item
+                  value={item.title}
+                  onCommand={(val) => {
+                    item.command(val);
+                  }}
+                  key={item.title}
+                  className="rounded px-2 py-1.5 mb-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <p>{item.title}</p>
+                </SlashCmd.Item>
+              ))}
             </SlashCmd.List>
           </SlashCmd.Cmd>
         </SlashCmd.Root>
       </SlashCmdProvider>
-
     </div>
   );
 };

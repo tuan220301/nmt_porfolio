@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         console.log(`✅ [create/route.ts] Contents parsed:`, {
           blockCount: contents?.length || 0,
         });
-        
+
         // Log detailed block information
         console.log(`📦 [create/route.ts] Detailed block information:`);
         contents.forEach((block: any, idx: number) => {
@@ -65,9 +65,10 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // Upload preview image to S3 (simplified - no folder structure)
-        const fileKey = generateFileKey(file.name);
+        // Upload preview image to S3 with folder structure using project title
+        const fileKey = generateFileKey(file.name, title);
         console.log(`📤 [create/route.ts] Creating project with preview image: ${file.name} (${(file.size / 1024).toFixed(2)}KB)`);
+        console.log(`   Folder structure: uploads/${title}/...`);
         const uploadStart = Date.now();
         const previewImageUrl = await uploadImageToS3(file, fileKey);
         const uploadTime = ((Date.now() - uploadStart) / 1000).toFixed(2);

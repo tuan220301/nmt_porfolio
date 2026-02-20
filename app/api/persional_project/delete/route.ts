@@ -14,7 +14,12 @@ export async function DELETE(req: NextRequest) {
       await connectDB();
 
       const { searchParams } = new URL(req.url);
-      const projectId = searchParams.get("project_id");
+      let projectId = searchParams.get("project_id");
+
+      // Clean projectId: remove any query string artifacts (e.g., ?t=timestamp)
+      if (projectId) {
+        projectId = projectId.split('?')[0].trim();
+      }
 
       console.log(`📦 [delete/route.ts] Request received:`, {
         projectId: projectId,
@@ -55,9 +60,13 @@ export async function DELETE(req: NextRequest) {
       }
 
       // Delete all project content block images and project folder from S3
-      const titleSlug = project.title.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
+      const titleSlug = project.title
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9-_]/g, '')
+        .toLowerCase();
       const folderPath = `uploads/${titleSlug}`;
-      
+
       console.log(`🗑️ [delete/route.ts] Deleting project folder from S3:`, {
         folderPath: folderPath,
       });
