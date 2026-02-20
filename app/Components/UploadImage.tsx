@@ -6,23 +6,30 @@ import { AnimatePresence, motion } from "framer-motion";
 type UploadImageProps = {
   selectedImage: any;
   setSelectedImage: (selectedImage: any) => void;
-}
+};
 // Define a functional component named UploadAndDisplayImage
 const UploadAndDisplayImage = (props: UploadImageProps) => {
   const { ...prop } = props;
+
+  // Detect if selectedImage is a URL string or a File/Blob object
+  const imageUrl = typeof prop.selectedImage === 'string'
+    ? prop.selectedImage
+    : prop.selectedImage instanceof File || prop.selectedImage instanceof Blob
+      ? URL.createObjectURL(prop.selectedImage)
+      : null;
 
   // Return the JSX for rendering
   return (
     <div className="flex gap-4">
       {/* Conditionally render the selected image if it exists */}
-      {prop.selectedImage && (
+      {prop.selectedImage && imageUrl && (
         <AnimatePresence>
           {prop.selectedImage && (
             <motion.img
               key="image"
               alt="not found"
               width={"250px"}
-              src={URL.createObjectURL(prop.selectedImage)}
+              src={imageUrl}
               initial={{ opacity: 0, scale: 0.5, x: -50 }} // Bắt đầu nhỏ + lệch trái
               animate={{ opacity: 1, scale: 1, x: 0 }} // Hiển thị đầy đủ
               exit={{ opacity: 0, scale: 0.5, x: 50 }}

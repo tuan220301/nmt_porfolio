@@ -1,35 +1,49 @@
-// app/api/image/[fileId]/route.ts
-import { getGridFSBucket } from "@/app/lib/gridfs";
+import { getImageFromS3 } from "@/app/lib/s3";
 import { NextRequest } from "next/server";
-import { ObjectId } from "mongodb";
 import { OnErrorReturn } from "@/app/api/config";
+
+// Placeholder SVG for missing images
+const placeholderSVG = `<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="400" fill="#e5e7eb"/>
+  <text x="50%" y="50%" font-size="24" fill="#9ca3af" text-anchor="middle" dominant-baseline="middle">
+    Image not available
+  </text>
+</svg>`;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { fileId: string } },
+  { params }: { params: { fileId: string; }; },
 ) {
   try {
-    const bucket = await getGridFSBucket();
-    if (!bucket) {
-      return OnErrorReturn("Failed to initialize GridFSBucket");
+    // The fileId is now the full S3 URL key
+    const decodedFileId = decodeURIComponent(params.fileId);
+
+    if (!decodedFileId) {
+      return new Response(placeholderSVG, {
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
     }
 
-    const { fileId } = params;
-    if (!fileId) {
-      return OnErrorReturn("File ID is required");
-    }
+    // Get image from S3
+    const imageBuffer = await getImageFromS3(decodedFileId);
 
-    const objectId = new ObjectId(fileId);
-    const stream = bucket.openDownloadStream(objectId);
-
-    return new Response(stream as any, {
+    return new Response(new Uint8Array(imageBuffer), {
       headers: {
-        "Content-Type": "image/jpeg", // Bạn có thể lưu contentType thực tế khi upload
-        "Cache-Control": "public, max-age=86400", // Cache 1 ngày
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=86400", // Cache 1 day
       },
     });
   } catch (error: any) {
-    console.error("Error retrieving image:", error);
-    return OnErrorReturn(error);
+    console.error("Error retrieving image from S3:", error);
+    // Return placeholder image instead of error
+    return new Response(placeholderSVG, {
+      headers: {
+        "Content-Type": "image/svg+xml",
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
   }
 }

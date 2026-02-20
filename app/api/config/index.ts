@@ -21,13 +21,16 @@ export const CheckTokenInCookies = async (
     return OnErrorReturn("Authentication failed", 401);
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(
+    decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "default_secret_key",
     );
-    return await callback(decoded);
   } catch (error) {
     return OnErrorReturn("Invalid or expired token", 401);
   }
+
+  // Let callback errors bubble up to outer catch block
+  return await callback(decoded);
 };

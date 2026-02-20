@@ -34,7 +34,7 @@ const Navbar = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const data: ResponseApi<boolean> = await callApi("/auth/cookie", "GET");
+        const data: ResponseApi<boolean> = await callApi("/api/auth/cookie", "GET");
         if (data && data.isSuccess && data.data) {
           setIsLoggedAtom(data.data);
         }
@@ -52,7 +52,7 @@ const Navbar = () => {
   });
   const handleLoggout = async () => {
     try {
-      const data: ResponseApi<string> = await callApi("/auth/logout", "POST");
+      const data: ResponseApi<string> = await callApi("/api/auth/logout", "POST");
       if (data && data.isSuccess) {
         setToastAtom({
           isOpen: true,

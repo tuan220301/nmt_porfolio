@@ -1,31 +1,26 @@
 "use client";
+
+import { Color } from "@tiptap/extension-color";
+import BulletList from "@tiptap/extension-bullet-list";
+import Document from "@tiptap/extension-document";
+import ListItem from "@tiptap/extension-list-item";
+import OrderedList from "@tiptap/extension-ordered-list";
+import Paragraph from "@tiptap/extension-paragraph";
+import Dropcursor from "@tiptap/extension-dropcursor";
+import Image from "@tiptap/extension-image";
+import Text from "@tiptap/extension-text";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Underline from "@tiptap/extension-underline";
+import TextStyle from "@tiptap/extension-text-style";
+import { EditorContent, useEditor } from "@tiptap/react";
+import Placeholder from "@tiptap/extension-placeholder";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  useEditor,
-  EditorContent,
-  BubbleMenu,
-  FloatingMenu,
-} from "@tiptap/react";
-import {
-  Bold,
-  Italic,
-  Underline,
-  Document,
-  Paragraph,
-  Text,
-  BulletList,
-  OrderedList,
-  ListItem,
-  Link,
-  Color,
-  Placeholder,
-  Image,
-  Dropcursor,
-  TextStyle,
-} from "@tiptap/extension-starter-kit";
-import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { enableKeyboardNavigation } from "./SelectionMenu";
-import {
+  enableKeyboardNavigation,
   Slash,
+  SlashCmd,
+  SlashCmdProvider,
 } from "@harshtalks/slash-tiptap";
 
 import "./style.css";
@@ -33,7 +28,7 @@ import { SuggestionsTipTap } from "./suggestions_slash_tiptap";
 import { BaseHeadingCus } from "./BaseHeadingCus";
 import CustomImage from "./ImageExtension";
 import { AnimatePresence, motion } from "framer-motion";
-import LinkExtension from "@tiptap/extension-link";
+import Link from "@tiptap/extension-link";
 
 type TipTapPropsType = {
   onChangeContent: (content: string) => void;
@@ -58,12 +53,6 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
     fileInputRefExists: !!fileInputRef.current,
     editorEditable: isBorder ?? false,
     isUploading,
-  });
-
-  console.log(`\n📋 [Tiptap] Toolbar visibility:`, {
-    isActive,
-    toolbarVisible: isActive === true,
-    reason: !isActive ? `isActive is ${isActive}, toolbar hidden` : 'isActive is true, toolbar should be visible',
   });
 
   const editor = useEditor({
@@ -92,44 +81,13 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
       Placeholder.configure({
         placeholder: "Press / to see available commands",
       }),
-      LinkExtension.configure({
+      Link.configure({
         openOnClick: true,
         autolink: true,
         HTMLAttributes: {
           class: "text-blue-500 underline",
         },
       }),
-    ],
-    editorProps: {
-      handleDOMEvents: {
-        focus: () => {
-          onFocus?.();
-          return false;
-        },
-        blur: () => {
-          onBlur?.();
-          return false;
-        },
-      },
-    },
-    content: content,
-    onUpdate: ({ editor }) => {
-      const htmlContent = editor.getHTML();
-      const imageRegex = /<img[^>]+src=["']([^"']+)["']/g;
-      const imageUrls: string[] = [];
-      let match;
-      while ((match = imageRegex.exec(htmlContent)) !== null) {
-        imageUrls.push(match[1]);
-      }
-      
-      console.log(`📝 [Tiptap.onUpdate] Content changed. HTML length: ${htmlContent.length}`);
-      console.log(`📝 [Tiptap.onUpdate] Images detected: ${imageUrls.length}`);
-      if (imageUrls.length > 0) {
-        console.log(`   Image URLs:`, imageUrls.map(url => url.substring(0, 80) + '...'));
-      }
-      onChangeContent(htmlContent);
-    },
-  });
     ],
     editorProps: {
       handleDOMEvents: {
@@ -140,35 +98,29 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
           return false;
         },
         blur: (view) => {
-          // Don't blur if image upload is in progress
           if (isUploading) {
-            console.log(`⏸️ [Tiptap.onBlur] BLOCKED - image upload in progress (isUploading=${isUploading})`);
-            return true; // IMPORTANT: return true to stop propagation and prevent blur
+            console.log(`🔍 [Tiptap.onBlur] Blur prevented - image upload in progress`);
+            return true;
           }
           
-          // Check if blur was caused by clicking file input button
           const activeElement = document.activeElement;
           if (activeElement?.tagName === 'INPUT' && (activeElement as HTMLInputElement).type === 'file') {
-            console.log(`⏸️ [Tiptap.onBlur] BLOCKED - focus moved to file input, file selection in progress`);
-            return true; // IMPORTANT: return true to stop and prevent blur
+            console.log(`🔍 [Tiptap.onBlur] Blur prevented - file input is active`);
+            return true;
           }
           
-          // If we reach here, allow blur to proceed normally
-          console.log(`🔍 [Tiptap.onBlur] Blur allowed - calling parent onBlur callback`);
-          // Use immediate call instead of setTimeout to be more responsive
+          console.log(`🔍 [Tiptap.onBlur] Blur allowed`);
           onBlur?.();
           return false;
         },
       },
       attributes: {
-        class:
-          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
+        class: "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
       },
     },
     content: content,
     onUpdate: ({ editor }) => {
       const htmlContent = editor.getHTML();
-      // Extract image URLs for logging
       const imageRegex = /<img[^>]+src=["']([^"']+)["']/g;
       const imageUrls: string[] = [];
       let match;
@@ -179,10 +131,9 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
       console.log(`📝 [Tiptap.onUpdate] Content changed. HTML length: ${htmlContent.length}`);
       console.log(`📝 [Tiptap.onUpdate] Images detected: ${imageUrls.length}`);
       if (imageUrls.length > 0) {
-        console.log(`   Image URLs:`, imageUrls);
+        console.log(`📝 [Tiptap.onUpdate] Image URLs:`, imageUrls);
       }
-      console.log(`📝 [Tiptap.onUpdate] Full HTML content:`, htmlContent);
-      onChangeContent(htmlContent); // Cập nhật state bên ngoài khi thay đổi nội dung
+      onChangeContent(htmlContent);
     },
   });
 
@@ -278,61 +229,53 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(isBorder ? true : false);
   }, [isBorder, editor]);
 
   useEffect(() => {
     if (!editor) return;
+    editor.setOptions({ editable: isBorder ?? false });
+  }, [isBorder, editor]);
 
-    // Only update if content actually changed to avoid unnecessary re-renders
-    const currentContent = editor.getHTML();
-    if (content && content !== currentContent && content !== '<p></p>') {
-      editor.commands.setContent(content, false);
-    }
+  useEffect(() => {
+    if (!editor || content === editor.getHTML()) return;
+    editor.commands.setContent(content);
   }, [content, editor]);
 
   const CheckForBoldWhenActive = (item: any) => {
-    const isActive =
-      (item.title === "Bold" && editor?.isActive("bold")) ||
-      (item.title === "Italic" && editor?.isActive("italic")) ||
-      (item.title === "Underline" && editor?.isActive("underline"));
-
-    return (
-      <p className={`hover:font-bold ${isActive ? "italic" : ""}`}>
-        {item.title}
-      </p>
-    );
+    if (item.title === "Heading 1") {
+      return (
+        <div className="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="size-4"
+          >
+            <path d="M5 3v18h4v-7h6v7h4V3h-4v6H9V3H5z" />
+          </svg>
+          <span>{item.title}</span>
+        </div>
+      );
+    }
+    return <span>{item.title}</span>;
   };
 
-  if (!editor) {
-    return null;
-  }
-
   const isSelected = (format: "bold" | "italic" | "underline") => {
-    if (editor) {
-      editor.chain().focus();
-      if (editor.isActive(format)) {
-        // Nếu đang được chọn thì bỏ định dạng
-        editor.chain().unsetMark(format).run();
-      } else {
-        // Nếu chưa được chọn thì áp dụng định dạng
-        editor.chain().setMark(format).run();
-      }
-    }
+    return editor?.isActive(format);
   };
 
   const OptionButton = (
     nameActive: "bold" | "italic" | "underline",
     children: React.ReactNode,
   ) => {
-    const isActive = editor.isActive(nameActive);
     return (
       <button
-        className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isActive
-          ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
-          : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
         onClick={() => isSelected(nameActive)}
+        className={`px-2 py-1 border rounded transition-colors ${
+          isSelected(nameActive)
+            ? "bg-blue-100 border-blue-400 dark:bg-blue-900/30 dark:border-blue-500"
+            : "border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+        }`}
         title={nameActive.charAt(0).toUpperCase() + nameActive.slice(1)}
       >
         {children}
@@ -343,8 +286,11 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
   const ButtonColor = (name: string, color: string) => {
     return (
       <button
-        onClick={() => editor.chain().focus().setColor(color).run()}
-        className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${editor.isActive("textStyle", { color: color }) ? "border-gray-800 dark:border-gray-200 ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-gray-400 dark:ring-gray-600" : "border-gray-300 dark:border-gray-600 hover:border-gray-500"}`}
+        key={`color-${name}`}
+        onClick={() => editor?.chain().focus().setColor(color).run()}
+        className={`w-6 h-6 rounded-full border-2 transition-all ${
+          editor?.isActive("textStyle", { color }) ? "border-gray-800 dark:border-white scale-110" : "border-gray-300"
+        }`}
         style={{ backgroundColor: color }}
         title={name}
       />
@@ -352,20 +298,20 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
   };
 
   const setLink = () => {
-    const previousUrl = editor.getAttributes("link").href;
+    const previousUrl = editor?.getAttributes("link").href;
     const url = window.prompt("Enter URL", previousUrl);
 
-    // Nếu không nhập gì thì bỏ link
     if (url === null) return;
     if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor?.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
 
-    // Nếu có url thì set link
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    editor?.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
+
   if (!editor) return null;
+
   return (
     <div className="p-3 space-y-3">
       <SlashCmdProvider>
@@ -393,58 +339,27 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
             {/* Image Upload Button */}
             <button
+              onClick={() => fileInputRef.current?.click()}
               className="p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               disabled={isUploading}
-              title={isUploading ? `Uploading... ${uploadingProgress}` : "Upload Image"}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                console.log(`\n🖱️ [Tiptap.ImageButton] onClick triggered`);
-                console.log(`   Button state:`, {
-                  isUploading,
-                  uploadingProgress,
-                  fileInputRefExists: !!fileInputRef.current,
-                });
-                
-                if (!isUploading && fileInputRef.current) {
-                  console.log(`   ✅ Calling fileInputRef.current.click()`);
-                  fileInputRef.current.click();
-                  console.log(`   ✅ File picker should open now`);
-                } else if (isUploading) {
-                  console.warn(`   ⚠️ Cannot upload - already uploading. Wait for current upload to complete.`);
-                } else {
-                  console.error(`   ❌ fileInputRef.current is NULL - file input element not found!`);
-                }
-              }}
+              title="Upload Image"
             >
-              <label className="cursor-pointer inline-flex items-center justify-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  ref={fileInputRef}
-                />
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
+              {isUploading && <span className="text-xs font-medium text-amber-600 dark:text-amber-400">{uploadingProgress}</span>}
+              {!isUploading && (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-5">
                   <path d="M.5 1a.5.5 0 0 0-.5.5v12a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-12a.5.5 0 0 0-.5-.5H.5ZM1 12.5v-11h14v11H1Z" />
-                  <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
-                </svg>
-              </label>
-              }}
-            >
-              {isUploading ? (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 animate-spin">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-                  </svg>
-                  <span className="text-xs font-medium">{uploadingProgress || 'Uploading...'}</span>
-                </>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
                   <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
                   <path d="M1 13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2l-3.86-3.86a1 1 0 0 0-1.41 0L7 9.67l-2.22-2.22a1 1 0 0 0-1.41 0L1 10.33v2.67Z" />
                   <circle cx="12.5" cy="4.5" r="1.5" />
                 </svg>
-              </label>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                ref={fileInputRef}
+              />
             </button>
 
             {/* Color Picker Toggle */}
@@ -490,7 +405,7 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
 
               {/* Unset Button */}
               <button
-                onClick={() => editor.chain().focus().unsetColor().run()}
+                onClick={() => editor?.chain().focus().unsetColor().run()}
                 className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                 title="Remove color"
               >
@@ -537,7 +452,6 @@ const Tiptap = ({ onChangeContent, content, isBorder, onFocus, onBlur, isActive,
           </SlashCmd.Cmd>
         </SlashCmd.Root>
       </SlashCmdProvider>
-
     </div>
   );
 };

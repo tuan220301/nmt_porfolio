@@ -33,7 +33,7 @@ const AboutPage = () => {
   const [listProject, setListProject] = useState<ProjectResponseType[]>([]);
   useEffect(() => {
     setProjectDataAtom({
-      content: "",
+      contents: [],
       image_preview: "",
       title: "",
       create_at: new Date(),
@@ -45,7 +45,7 @@ const AboutPage = () => {
     setLoadingAtom(true);
     try {
       const projectResponse: ResponseApi<ProjectResponseType[]> = await callApi(
-        "/persional_project/list",
+        "/api/persional_project/list",
         "GET",
       );
       if (projectResponse && projectResponse.isSuccess) {

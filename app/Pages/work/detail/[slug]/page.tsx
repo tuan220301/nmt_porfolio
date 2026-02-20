@@ -8,17 +8,17 @@ import { WorkPageDetailData, WorkPageDetailStatus } from "@/app/Atom/WorkAtom";
 import ButtonIconComponent from "@/app/Components/ButtonIconComponent";
 import InputComponent from "@/app/Components/Input";
 import DeleteProjectModal from "@/app/Components/Modals/DeleteModal";
-import Tiptap from "@/app/Components/Tiptap/Tiptap";
 import UploadAndDisplayImage from "@/app/Components/UploadImage";
-import { ProjectResponseType } from "@/app/Ults";
+import MultiBlockEditor from "@/app/Components/Tiptap/MultiBlockEditor";
+import { ContentBlock, ProjectResponseType } from "@/app/Ults";
 import { ResponseApi } from "@/app/api/models/response";
-import { API_BASE_URL, useApi } from "@/app/hooks/useApi";
+import { useApi } from "@/app/hooks/useApi";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 
 const DetailProject = () => {
-  const [content, setContent] = useState("");
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [title, setTitle] = useState("");
   const [image, setImage] = useState<any>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -34,38 +34,37 @@ const DetailProject = () => {
   const { callApi } = useApi();
   const router = useRouter();
 
+  // Initialize with default block if editing existing project
   useEffect(() => {
-    const fetchImage = async () => {
+    try {
       if (workPageStatus === "EDIT" && workPageDataAtom.image_preview) {
         console.log("work page detail: ", workPageDataAtom);
 
-        // Chuyển URL ảnh từ API thành File
-        const file_img = await urlToFile(
-          API_BASE_URL.slice(0, -4) + workPageDataAtom.image_preview,
-        );
+        // Use image_preview URL directly for preview
+        setImage(workPageDataAtom.image_preview);
         setDes(workPageDataAtom.des ?? "");
-        setImage(file_img);
-        setContent(workPageDataAtom.content);
-        setTitle(workPageDataAtom.title);
+        setTitle(workPageDataAtom.title ?? "");
+
+        // Load existing blocks or create initial block
+        if (workPageDataAtom.contents && workPageDataAtom.contents.length > 0) {
+          setBlocks(workPageDataAtom.contents);
+        } else {
+          setBlocks([{ index: 0, type: "text", content: "" }]);
+        }
       } else {
+        // New project
         setImage(null);
-        setContent("");
         setTitle("");
         setDes("");
+        setBlocks([{ index: 0, type: "text", content: "" }]);
       }
-    };
-
-    fetchImage();
+    } catch (error) {
+      console.error("Failed to load project data:", error);
+      setImage(null);
+      setBlocks([{ index: 0, type: "text", content: "" }]);
+    }
   }, [workPageStatus, workPageDataAtom]);
 
-  const urlToFile = async (url: string, fileName?: string): Promise<File> => {
-    const response = await fetch(url, { credentials: "include" }); // Gửi kèm cookie nếu cần
-    const blob = await response.blob(); // Chuyển dữ liệu thành Blob
-    const ext = blob.type.split("/")[1] || "jpg"; // Lấy đuôi file từ mime type
-    const finalFileName = fileName || url.split("/").pop() || `image.${ext}`;
-
-    return new File([blob], finalFileName, { type: blob.type });
-  };
   const handleSave = async () => {
     setLoadingAtom(true);
     let user_id = "";
@@ -73,21 +72,51 @@ const DetailProject = () => {
     const formData = new FormData();
     if (user_id !== "") {
       formData.append("title", title);
-      formData.append("content", content);
-      formData.append("image", image);
+      formData.append("contents", JSON.stringify(blocks));
+
+      // Only append preview image if it's a File (new upload), skip if it's a URL string
+      if (image instanceof File) {
+        formData.append("image", image);
+      }
+
       formData.append("user_id", user_id);
       formData.append("des", des);
+
       if (workPageStatus === "EDIT") {
         formData.append("project_id", workPageDataAtom._id ?? "");
       }
-      console.log("FormData contents:");
-      formData.forEach((value, key) => {
-        console.log(`${key}:`, value);
+
+      console.log("═══════════════════════════════════════════════════════════════════════");
+      console.log("[DetailProject.handleSave] SAVING PROJECT");
+      console.log("═══════════════════════════════════════════════════════════════════════");
+      console.log("Saving project with data:");
+      console.log(`- Title: ${title}`);
+      console.log(`- Description: ${des}`);
+      console.log(`- Content blocks: ${blocks.length}`);
+      console.log(`- Preview image: ${image instanceof File ? 'New file' : image}`);
+      
+      // Log detailed block information
+      console.log(`\n📦 [DetailProject.handleSave] Block contents to save:`);
+      blocks.forEach((block, idx) => {
+        const imageCount = (block.content.match(/<img/g) || []).length;
+        console.log(`   Block ${idx} (index: ${block.index}, type: ${block.type}):`, {
+          contentLength: block.content.length,
+          imageCount: imageCount,
+          hasContent: block.content !== '<p></p>' && block.content !== '',
+          preview: block.content.substring(0, 80),
+        });
+        
+        // Log image URLs in this block
+        if (imageCount > 0) {
+          const imageUrls = block.content.match(/src=["']([^"']+)["']/g) || [];
+          console.log(`      📸 Image URLs (${imageCount}):`, imageUrls);
+        }
       });
+
       const projectResponse: ResponseApi<ProjectResponseType> = await callApi(
         workPageStatus === "EDIT"
-          ? "/persional_project/edit"
-          : "/persional_project/create",
+          ? "/api/persional_project/edit"
+          : "/api/persional_project/create",
         "POST",
         formData,
       );
@@ -99,9 +128,13 @@ const DetailProject = () => {
           status: "SUCCESS",
         });
 
+        console.log("✅ [DetailProject.handleSave] Project saved successfully!");
+        console.log("═══════════════════════════════════════════════════════════════════════\n");
         setLoadingAtom(false);
-        router.push("/Pages/work"); // Chuyển hướng khi token hết hạn
+        router.push("/Pages/work"); // Redirect after successful save
       } else {
+        console.error("❌ [DetailProject.handleSave] Project save failed:", projectResponse?.message);
+        console.log("═══════════════════════════════════════════════════════════════════════\n");
         setLoadingAtom(false);
         setToastAtom({
           isOpen: true,
@@ -126,7 +159,7 @@ const DetailProject = () => {
     setLoadingAtom(true);
 
     const response = await callApi(
-      `/persional_project/delete?project_id=${workPageDataAtom._id}`,
+      `/api/persional_project/delete?project_id=${workPageDataAtom._id}`,
       "DELETE",
       { project_id: workPageDataAtom._id },
     );
@@ -161,6 +194,7 @@ const DetailProject = () => {
   const handleEdit = () => {
     setIsEdit(!isEdit);
   };
+
   const TitleInputMemo = useMemo(() => {
     return (
       <div>
@@ -174,6 +208,7 @@ const DetailProject = () => {
       </div>
     );
   }, [title, isEdit]);
+
   const DesInputMemo = useMemo(() => {
     return (
       <div>
@@ -199,18 +234,21 @@ const DetailProject = () => {
       </div>
     );
   }, [image, workPageStatus]);
+
   const EditorMemo = useMemo(() => {
     return (
       <div>
-        <div className="font-bold text-lg px-2">Content</div>
-        <Tiptap
-          content={content}
-          onChangeContent={setContent}
+        <div className="font-bold text-lg px-2 mb-2">Content Blocks</div>
+        <MultiBlockEditor
+          blocks={blocks}
+          onBlocksChange={setBlocks}
           isBorder={isEdit}
+          projectTitle={title}
         />
       </div>
     );
-  }, [content, isEdit]);
+  }, [blocks, isEdit, title]);
+
   if (isMobileAtom) {
     return (
       <div className="w-full h-auto text-center">
@@ -218,6 +256,7 @@ const DetailProject = () => {
       </div>
     );
   }
+
   return (
     <div className="w-2/3 h-full">
       <div className="flex flex-row justify-between items-center">
@@ -298,7 +337,6 @@ const DetailProject = () => {
       </div>
       <div className="p-2">{TitleInputMemo}</div>
       <div className="p-2">{DesInputMemo}</div>
-
       <div className="p-2">{UpLoadImageMemo}</div>
       {EditorMemo}
       <DeleteProjectModal

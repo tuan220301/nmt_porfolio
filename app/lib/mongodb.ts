@@ -6,7 +6,7 @@ const MONGODB_URI = process.env.MONGODB_URI; // Lấy từ biến môi trường
 if (!MONGODB_URI) {
   throw new Error("MISSING: MongoDB connection string!");
 } else {
-  console.log("Mongo url: ", MONGODB_URI);
+  console.log("Mongo is connected");
 }
 export const connectDB = async (): Promise<Db> => {
   if (mongoose.connection.readyState >= 1) {

@@ -39,7 +39,7 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const data: ResponseApi<LoginResponeType> = await callApi(
-        "/auth/login",
+        "/api/auth/login",
         "POST",
         formLogin,
       );
