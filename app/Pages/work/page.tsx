@@ -2,7 +2,7 @@
 "use client";
 
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import Link from "next/link";
 import { LoggedAtom } from "@/app/Atom/IsLogged";
@@ -38,10 +38,12 @@ const AboutPage = () => {
       title: "",
       create_at: new Date(),
       update_at: new Date(),
+      user_id: "",
+      image_url: "",
     } as ProjectResponseType);
     handleGetListProject();
   }, []);
-  const handleGetListProject = async () => {
+  const handleGetListProject = useCallback(async () => {
     setLoadingAtom(true);
     try {
       const projectResponse: ResponseApi<ProjectResponseType[]> = await callApi(
@@ -78,8 +80,8 @@ const AboutPage = () => {
     } finally {
       setLoadingAtom(false);
     }
-  };
-  const handleProjectAction = (item?: ProjectResponseType) => {
+  }, [setLoadingAtom, setListProject, setToastAtom]);
+  const handleProjectAction = useCallback((item?: ProjectResponseType) => {
     if (item) {
       setProjectDataAtom(item);
       setWorkDetailStatus("EDIT");
@@ -88,7 +90,7 @@ const AboutPage = () => {
       setWorkDetailStatus("NEW");
       router.push("work/detail/[slug]");
     }
-  };
+  }, [router, setProjectDataAtom, setWorkDetailStatus]);
   const ButtonAddProjectMemo = useMemo(() => {
     return (
       <>
@@ -119,7 +121,7 @@ const AboutPage = () => {
         )}
       </>
     );
-  }, [isLoggedAtom]);
+  }, [handleProjectAction]);
   return (
     <div className={isMobileAtom ? "w-full" : "w-1/2"}>
       <div className="w-full flex items-center justify-center mb-6 text-center text-lg">

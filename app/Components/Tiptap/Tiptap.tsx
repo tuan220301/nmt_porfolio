@@ -273,7 +273,7 @@ const Tiptap = ({
         alert(`Image upload failed: ${message}`);
       }
     },
-    [editor, projectTitle]
+    [editor, projectTitle, isUploading]
   );
 
   useEffect(() => {

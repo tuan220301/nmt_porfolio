@@ -148,7 +148,7 @@ const Navbar = () => {
                 <Dropdown open={openDropDown}>
                   <div className="flex flex-col gap-3 text-lg">
                     <Link onClick={handleOpenDropDown} href={"/Pages/contact"}>
-                      Dashboard
+                      Contact
                     </Link>
                     <Link onClick={handleLoggout} href={"/Pages/login"}>
                       Logout

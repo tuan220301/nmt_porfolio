@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { BubbleMenuProps, SelectionMenuType } from "./type";
-import { BubbleMenu as BubbleMenuReact } from "@tiptap/react"
+import { BubbleMenu as BubbleMenuReact } from "@tiptap/react";
 import SelectionMenu from "./SelectionMenu";
 export const BubbleMenu = ({ editor, containerRef }: BubbleMenuProps) => {
   const [selectionType, setSelectionType] = useState<SelectionMenuType>(null);
   useEffect(() => {
     if (selectionType !== "link") setSelectionType(null);
-  });
+  }, [selectionType]);
   if (!editor || !containerRef.current) return null;
   return (
     <BubbleMenuReact

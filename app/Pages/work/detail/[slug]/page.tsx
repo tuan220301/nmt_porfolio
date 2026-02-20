@@ -233,7 +233,7 @@ const DetailProject = () => {
         />
       </div>
     );
-  }, [image, workPageStatus]);
+  }, [image]);
 
   const EditorMemo = useMemo(() => {
     console.log(`\n📋 [DetailProject.EditorMemo] Rendering MultiBlockEditor with:`, {
