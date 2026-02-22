@@ -2,16 +2,17 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import BulletList from "@tiptap/extension-bullet-list";
+import OrderedList from "@tiptap/extension-ordered-list";
+import Underline from "@tiptap/extension-underline";
 import Color from "@tiptap/extension-color";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import TextStyle from "@tiptap/extension-text-style";
 import Placeholder from "@tiptap/extension-placeholder";
-import { SlashCmdProvider, SlashCmd, Slash } from "@harshtalks/slash-tiptap";
 import { AnimatePresence, motion } from "framer-motion";
 
 import "./style.css";
-import { SuggestionsTipTap } from "./suggestions_slash_tiptap";
 import { BaseHeadingCus } from "./BaseHeadingCus";
 import CustomImage from "./ImageExtension";
 
@@ -58,6 +59,17 @@ const Tiptap = ({
           levels: [1, 2, 3],
         },
       }),
+      BulletList.configure({
+        HTMLAttributes: {
+          class: "list-disc",
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: "list-decimal",
+        },
+      }),
+      Underline.configure(),
       Image.configure({
         allowBase64: true,
         HTMLAttributes: {
@@ -66,6 +78,8 @@ const Tiptap = ({
       }),
       Link.configure({
         openOnClick: true,
+        autolink: true,
+        linkOnPaste: true,
         HTMLAttributes: {
           rel: "noopener noreferrer",
           target: "_blank",
@@ -76,11 +90,6 @@ const Tiptap = ({
       }),
       TextStyle.configure(),
       CustomImage,
-      Slash.configure({
-        suggestion: {
-          items: () => SuggestionsTipTap,
-        },
-      }),
       Placeholder.configure({
         placeholder: "Press / to see available commands",
       }),
@@ -297,11 +306,12 @@ const Tiptap = ({
 
   // Format button handler
   const toggleFormat = (format: "bold" | "italic" | "underline") => {
-    editor.chain().focus();
-    if (editor.isActive(format)) {
-      editor.chain().toggleMark(format).run();
-    } else {
-      editor.chain().setMark(format).run();
+    if (format === "bold") {
+      editor.chain().focus().toggleBold().run();
+    } else if (format === "italic") {
+      editor.chain().focus().toggleItalic().run();
+    } else if (format === "underline") {
+      editor.chain().focus().toggleUnderline().run();
     }
   };
 
@@ -349,7 +359,7 @@ const Tiptap = ({
 
   // Set link handler
   const handleSetLink = () => {
-    const previousUrl = editor.getAttributes("link").href;
+    const previousUrl = editor.getAttributes("link").href || "";
     const url = window.prompt("Enter URL", previousUrl);
 
     if (url === null) return;
@@ -360,215 +370,263 @@ const Tiptap = ({
 
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
+
+  // Toggle bullet list
+  const toggleBulletList = () => {
+    editor.chain().focus().toggleBulletList().run();
+  };
+
+  // Toggle ordered list
+  const toggleOrderedList = () => {
+    editor.chain().focus().toggleOrderedList().run();
+  };
+
+  // Toggle heading
+  const toggleHeading = (level: 1 | 2 | 3) => {
+    editor.chain().focus().toggleHeading({ level }).run();
+  };
+
+  // Check if list is active
+  const isBulletListActive = editor.isActive("bulletList");
+  const isOrderedListActive = editor.isActive("orderedList");
+  const isHeadingActive = (level: 1 | 2 | 3) => editor.isActive("heading", { level });
+
   return (
     <div className="p-3 space-y-3">
-      <SlashCmdProvider>
-        {/* Toolbar - show when editor is active/focused or when in edit mode (isBorder) */}
-        {(isActive || isBorder) && (
-          <div className="flex items-center gap-1.5 px-2 py-2 bg-gray-50 dark:bg-black rounded-lg border border-gray-200 dark:border-gray-800 flex-wrap">
-            {/* Text Formatting Group */}
-            <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-700">
-              {FormatButton("bold", "B", "Bold")}
-              {FormatButton("italic", "I", "Italic")}
-              {FormatButton("underline", "U", "Underline")}
-            </div>
+      {/* Toolbar - show when editor is active/focused or when in edit mode (isBorder) */}
+      {(isActive || isBorder) && (
+        <div className="flex items-center gap-1.5 px-2 py-2 bg-gray-50 dark:bg-black rounded-lg border border-gray-200 dark:border-gray-800 flex-wrap">
+          {/* Text Formatting Group */}
+          <div className="flex items-center gap-1 pr-2 border-r border-gray-300 dark:border-gray-700">
+            {FormatButton("bold", "B", "Bold")}
+            {FormatButton("italic", "I", "Italic")}
+            {FormatButton("underline", "U", "Underline")}
+          </div>
 
-            {/* Link Button */}
+          {/* Heading & List Group */}
+          <div className="flex items-center gap-1 px-2 border-r border-gray-300 dark:border-gray-700">
+            {/* H1 Button */}
             <button
-              onClick={handleSetLink}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-              title="Add Link"
+              className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isHeadingActive(1)
+                ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              onClick={() => toggleHeading(1)}
+              title="Heading 1"
             >
-              <p className="font-medium">L</p>
+              H1
             </button>
-
-            {/* Separator */}
-            <div className="h-5 w-px bg-gray-300 dark:bg-gray-600"></div>
-
-            {/* Image Upload Button */}
+            {/* H2 Button */}
             <button
-              className="p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              disabled={isUploading}
-              title={
-                isUploading
-                  ? `Uploading... ${uploadingProgress}`
-                  : "Upload Image"
-              }
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                console.log(`\n🖱️ [Tiptap.ImageButton] onClick triggered`);
-                console.log(`   Timestamp: ${new Date().toISOString()}`);
-                console.log(`   Button state:`, {
-                  isUploading,
-                  uploadingProgress,
-                  fileInputRefExists: !!fileInputRef.current,
-                  projectTitle: projectTitle || "NOT PROVIDED",
-                  editorExists: !!editor,
-                  isBorder,
-                  isActive,
-                });
-
-                if (!isUploading && fileInputRef.current) {
-                  console.log(`   ✅ Calling fileInputRef.current.click()`);
-                  fileInputRef.current.click();
-                  console.log(`   ✅ File picker should open now`);
-                } else if (isUploading) {
-                  console.warn(
-                    `   ⚠️ Cannot upload - already uploading. Wait for current upload to complete.`
-                  );
-                } else {
-                  console.error(
-                    `   ❌ fileInputRef.current is NULL - file input element not found!`
-                  );
-                }
-              }}
+              className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isHeadingActive(2)
+                ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              onClick={() => toggleHeading(2)}
+              title="Heading 2"
             >
-              <label className="cursor-pointer inline-flex items-center justify-center pointer-events-none">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  tabIndex={-1}
-                  ref={fileInputRef}
-                />
-                {isUploading ? (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="w-5 h-5 animate-spin"
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                    <span className="text-xs font-medium">
-                      {uploadingProgress || "Uploading..."}
-                    </span>
-                  </>
-                ) : (
+              H2
+            </button>
+            {/* H3 Button */}
+            <button
+              className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isHeadingActive(3)
+                ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              onClick={() => toggleHeading(3)}
+              title="Heading 3"
+            >
+              H3
+            </button>
+            {/* Bullet List Button */}
+            <button
+              className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isBulletListActive
+                ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              onClick={toggleBulletList}
+              title="Bullet List"
+            >
+              •
+            </button>
+            {/* Ordered List Button */}
+            <button
+              className={`px-3 py-1.5 text-sm border rounded-lg font-medium transition-all ${isOrderedListActive
+                ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+              onClick={toggleOrderedList}
+              title="Ordered List"
+            >
+              1.
+            </button>
+          </div>
+
+          {/* Link Button */}
+          <button
+            onClick={handleSetLink}
+            className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+            title="Add Link"
+          >
+            <p className="font-medium">L</p>
+          </button>
+
+          {/* Separator */}
+          <div className="h-5 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Image Upload Button */}
+          <button
+            className="p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={isUploading}
+            title={
+              isUploading
+                ? `Uploading... ${uploadingProgress}`
+                : "Upload Image"
+            }
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              console.log(`\n🖱️ [Tiptap.ImageButton] onClick triggered`);
+              console.log(`   Timestamp: ${new Date().toISOString()}`);
+              console.log(`   Button state:`, {
+                isUploading,
+                uploadingProgress,
+                fileInputRefExists: !!fileInputRef.current,
+                projectTitle: projectTitle || "NOT PROVIDED",
+                editorExists: !!editor,
+                isBorder,
+                isActive,
+              });
+
+              if (!isUploading && fileInputRef.current) {
+                console.log(`   ✅ Calling fileInputRef.current.click()`);
+                fileInputRef.current.click();
+                console.log(`   ✅ File picker should open now`);
+              } else if (isUploading) {
+                console.warn(
+                  `   ⚠️ Cannot upload - already uploading. Wait for current upload to complete.`
+                );
+              } else {
+                console.error(
+                  `   ❌ fileInputRef.current is NULL - file input element not found!`
+                );
+              }
+            }}
+          >
+            <label className="cursor-pointer inline-flex items-center justify-center pointer-events-none">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                tabIndex={-1}
+                ref={fileInputRef}
+              />
+              {isUploading ? (
+                <>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 16 16"
+                    viewBox="0 0 24 24"
                     fill="currentColor"
-                    className="w-5 h-5"
+                    className="w-5 h-5 animate-spin"
                   >
-                    <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
-                    <path d="M1 13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2l-3.86-3.86a1 1 0 0 0-1.41 0L7 9.67l-2.22-2.22a1 1 0 0 0-1.41 0L1 10.33v2.67Z" />
-                    <circle cx="12.5" cy="4.5" r="1.5" />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
                   </svg>
-                )}
-              </label>
-            </button>
-
-            {/* Color Picker Toggle */}
-            <AnimatePresence initial={false}>
-              {!showColor ? (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => setShowColor(!showColor)}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2 text-sm font-medium"
-                >
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-red-400 to-purple-500"></div>
-                  Color
-                </motion.button>
-              ) : null}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Color Picker Panel */}
-        <AnimatePresence initial={false}>
-          {showColor ? (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 8 }}
-              exit={{ opacity: 0, y: -10 }}
-              key="colorPicker"
-              transition={{ duration: 0.2 }}
-              className="px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg flex items-center gap-2"
-            >
-              {/* Color Options */}
-              <div className="flex items-center gap-2">
-                {ColorButton("Red", "#F98181")}
-                {ColorButton("Yellow", "#FAF594")}
-                {ColorButton("Orange", "#FBBC88")}
-                {ColorButton("Purple", "#958DF1")}
-              </div>
-
-              {/* Divider */}
-              <div className="h-5 w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              {/* Unset Color Button */}
-              <button
-                onClick={() => editor.chain().focus().unsetColor().run()}
-                className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                title="Remove color"
-              >
-                Clear
-              </button>
-
-              {/* Close Button */}
-              <button
-                onClick={() => setShowColor(false)}
-                className="ml-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                title="Close color picker"
-              >
+                  <span className="text-xs font-medium">
+                    {uploadingProgress || "Uploading..."}
+                  </span>
+                </>
+              ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 16 16"
                   fill="currentColor"
-                  className="size-4"
+                  className="w-5 h-5"
                 >
-                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                  <path d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2Z" />
+                  <path d="M1 13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2l-3.86-3.86a1 1 0 0 0-1.41 0L7 9.67l-2.22-2.22a1 1 0 0 0-1.41 0L1 10.33v2.67Z" />
+                  <circle cx="12.5" cy="4.5" r="1.5" />
                 </svg>
-              </button>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+              )}
+            </label>
+          </button>
 
-        {/* Editor Content */}
-        <div
-          className={`rounded-lg mt-3 p-3 transition-all ${isBorder ? "border-2 border-blue-400 dark:border-blue-600" : ""
-            }`}
-        >
-          <EditorContent
-            editor={editor}
-            className="prose prose-sm dark:prose-invert max-w-none"
-          />
+          {/* Color Picker Toggle */}
+          <AnimatePresence initial={false}>
+            {!showColor ? (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setShowColor(!showColor)}
+                className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-red-400 to-purple-500"></div>
+                Color
+              </motion.button>
+            ) : null}
+          </AnimatePresence>
         </div>
+      )}
 
-        {/* Slash Commands */}
-        <SlashCmd.Root editor={editor}>
-          <SlashCmd.Cmd>
-            <SlashCmd.Empty>No commands available</SlashCmd.Empty>
-            <SlashCmd.List className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-900 shadow-lg max-h-64 overflow-y-auto">
-              {SuggestionsTipTap.map((item) => (
-                <SlashCmd.Item
-                  value={item.title}
-                  onCommand={(val) => {
-                    item.command(val);
-                  }}
-                  key={item.title}
-                  className="rounded px-2 py-1.5 mb-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                >
-                  <p>{item.title}</p>
-                </SlashCmd.Item>
-              ))}
-            </SlashCmd.List>
-          </SlashCmd.Cmd>
-        </SlashCmd.Root>
-      </SlashCmdProvider>
+      {/* Color Picker Panel */}
+      <AnimatePresence initial={false}>
+        {showColor ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 8 }}
+            exit={{ opacity: 0, y: -10 }}
+            key="colorPicker"
+            transition={{ duration: 0.2 }}
+            className="px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg flex items-center gap-2"
+          >
+            {/* Color Options */}
+            <div className="flex items-center gap-2">
+              {ColorButton("Red", "#F98181")}
+              {ColorButton("Yellow", "#FAF594")}
+              {ColorButton("Orange", "#FBBC88")}
+              {ColorButton("Purple", "#958DF1")}
+            </div>
+
+            {/* Divider */}
+            <div className="h-5 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setShowColor(false)}
+              className="ml-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="Close color picker"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="size-4"
+              >
+                <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+              </svg>
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {/* Editor Content */}
+      <div
+        className={`rounded-lg mt-3 p-4 overflow-visible transition-all ${isBorder ? "border-2 border-blue-400 dark:border-blue-600" : ""
+          }`}
+      >
+        <EditorContent
+          editor={editor}
+          className="prose prose-sm dark:prose-invert max-w-none prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-6 prose-ol:pl-6"
+        />
+      </div>
     </div>
   );
 };

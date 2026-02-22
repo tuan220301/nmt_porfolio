@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import Tiptap from "./Tiptap";
 import { ContentBlock } from "@/app/Ults";
 import ButtonIconComponent from "../ButtonIconComponent";
 import { motion, AnimatePresence } from "framer-motion";
+import Tiptap from "./Tiptap";
 
 type MultiBlockEditorProps = {
     blocks: ContentBlock[];
@@ -421,7 +421,7 @@ const MultiBlockEditor = ({
 
                         {/* Block content editor */}
                         <div className="flex-1">
-                            <div className={`rounded-lg overflow-hidden ${isBorder && focusedBlockIndex === block.index ? "border-2 border-blue-500" : ""
+                            <div className={`rounded-lg overflow-visible ${isBorder && focusedBlockIndex === block.index ? "border-2 border-blue-500" : ""
                                 }`}>
                                 <Tiptap
                                     content={block.content}

@@ -53,9 +53,20 @@ const createS3Client = () => {
         },
         // Minimal retry at SDK level, we handle retry manually
         maxAttempts: 1,
-        // Disable keep-alive to prevent "bad record mac" SSL errors
-        httpAgent: new http.Agent({ keepAlive: false, maxSockets: 1 }),
-        httpsAgent: new https.Agent({ keepAlive: false, maxSockets: 1 }),
+        // Improve connection stability: Disable keepAlive for large uploads to prevent SSL issues
+        // Cloudflare R2 has issues with connection reuse on large payloads
+        httpAgent: new http.Agent({
+            keepAlive: false,
+            maxSockets: 5,
+            timeout: 120000
+        }),
+        httpsAgent: new https.Agent({
+            keepAlive: false,
+            maxSockets: 5,
+            timeout: 120000
+        }),
+        // Increased timeout for large PDF uploads (up to 180s for 10MB+ files)
+        requestTimeout: 180000,
     };
 
     const client = new S3Client(clientConfig);
@@ -135,6 +146,9 @@ export const uploadImageToS3 = async (
             sizeMB: (buffer.length / 1024 / 1024).toFixed(2),
         });
 
+        // Make a copy of buffer data to prevent stream issues on retry
+        const bufferData = new Uint8Array(buffer);
+
         // 3. COMPRESSION STATUS (if >1MB)
         if (buffer.length > 1024 * 1024) {
             console.log(`\n🔄 [uploadImageToS3] File > 1MB, attempting server-side compression...`);
@@ -171,15 +185,16 @@ export const uploadImageToS3 = async (
         const command = new PutObjectCommand({
             Bucket: CLOUDFLARE_BUCKET_NAME,
             Key: fileKey,
-            Body: buffer,
+            Body: bufferData,
             ContentType: file.type || 'image/jpeg',
+            ContentLength: bufferData.length,
         });
 
         console.log(`✅ [uploadImageToS3] PutObjectCommand created:`, {
             commandType: 'PutObjectCommand',
             bucket: CLOUDFLARE_BUCKET_NAME,
             key: fileKey,
-            bodySize: buffer.length,
+            bodySize: bufferData.length,
             contentType: file.type || 'image/jpeg',
         });
 
@@ -187,7 +202,7 @@ export const uploadImageToS3 = async (
         console.log(`\n🚀 [uploadImageToS3] Sending to S3/R2 with automatic retry...`);
         console.log(`   Bucket: ${CLOUDFLARE_BUCKET_NAME}`);
         console.log(`   Key: ${fileKey}`);
-        console.log(`   Size: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`   Size: ${(bufferData.length / 1024 / 1024).toFixed(2)}MB`);
         console.log(`   Max Retries: 3`);
 
         // Use retry helper for S3 send operation
@@ -209,7 +224,7 @@ export const uploadImageToS3 = async (
                 return sendResult;
             },
             3,
-            3000  // Increased from 2000ms to 3000ms
+            5000  // Increased from 3000ms to 5000ms for better cloud stability
         );
 
         console.log(`✅ [uploadImageToS3] S3 send successful:`, {

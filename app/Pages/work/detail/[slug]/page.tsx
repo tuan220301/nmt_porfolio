@@ -250,7 +250,6 @@ const DetailProject = () => {
 
     return (
       <div>
-        <div className="font-bold text-lg px-2 mb-2">Content Blocks</div>
         <MultiBlockEditor
           blocks={blocks}
           onBlocksChange={setBlocks}

@@ -2,13 +2,16 @@
 "use client";
 import { IsMobileAtom } from "@/app/Atom/IsMobile";
 import { ToastAtom } from "@/app/Atom/ToastAtom";
+import { LoggedAtom } from "@/app/Atom/IsLogged";
 import React, { useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import './../home/home.css';
 import Loading from "@/app/Components/Loading";
 const HomePage = () => {
   const isMobileAtom = useRecoilValue(IsMobileAtom);
+  const isLoggedAtom = useRecoilValue(LoggedAtom);
   const [loading, setLoading] = useState(false);
+  const [uploadingCV, setUploadingCV] = useState(false);
   const [form, setForm] = useState({
     email: '',
     content: ''
@@ -43,6 +46,114 @@ const HomePage = () => {
       ...form,
       [field]: e.target.value
     });
+  };
+
+  const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate PDF
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setToast({
+        isOpen: true,
+        message: 'Please select a PDF file only',
+        isAutoHide: false,
+        status: 'ERROR'
+      });
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          message: '',
+          isAutoHide: false,
+          status: ''
+        });
+      }, 2000);
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setToast({
+        isOpen: true,
+        message: 'File size must be less than 10MB',
+        isAutoHide: false,
+        status: 'ERROR'
+      });
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          message: '',
+          isAutoHide: false,
+          status: ''
+        });
+      }, 2000);
+      return;
+    }
+
+    try {
+      setUploadingCV(true);
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      const response = await fetch('/api/cv/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.isSuccess && data.data) {
+        setUploadingCV(false);
+        setToast({
+          isOpen: true,
+          message: 'CV uploaded successfully!',
+          isAutoHide: false,
+          status: 'SUCCESS'
+        });
+        setTimeout(() => {
+          setToast({
+            isOpen: false,
+            message: '',
+            isAutoHide: false,
+            status: ''
+          });
+        }, 2000);
+        // Reset file input
+        event.target.value = '';
+      } else {
+        setUploadingCV(false);
+        setToast({
+          isOpen: true,
+          message: data.message || 'CV upload failed',
+          isAutoHide: false,
+          status: 'ERROR'
+        });
+        setTimeout(() => {
+          setToast({
+            isOpen: false,
+            message: '',
+            isAutoHide: false,
+            status: ''
+          });
+        }, 2000);
+      }
+    } catch (error: any) {
+      setUploadingCV(false);
+      console.error('CV upload error:', error);
+      setToast({
+        isOpen: true,
+        message: 'Failed to upload CV',
+        isAutoHide: false,
+        status: 'ERROR'
+      });
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          message: '',
+          isAutoHide: false,
+          status: ''
+        });
+      }, 2000);
+    }
   };
 
   const handleSubmit = async () => {
@@ -145,6 +256,22 @@ const HomePage = () => {
           <button onClick={copyToClipboard} className="w-10 h-10 border rounded-lg flex items-center justify-center">
             <svg className="h-8 w-8" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">  <path stroke="none" d="M0 0h24v24H0z" />  <rect x="3" y="5" width="18" height="14" rx="2" />  <polyline points="3 7 12 13 21 7" /></svg>
           </button>
+          {isLoggedAtom && (
+            <label className="w-10 h-10 border rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleCVUpload}
+                disabled={uploadingCV}
+                className="hidden"
+              />
+              {uploadingCV ? (
+                <Loading width={'20px'} height={'20px'} />
+              ) : (
+                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />  <polyline points="17 8 12 3 7 8" />  <line x1="12" y1="3" x2="12" y2="15" /></svg>
+              )}
+            </label>
+          )}
         </div>
       </div>
       <p className="text-xl font-bold">Contact !!!</p>

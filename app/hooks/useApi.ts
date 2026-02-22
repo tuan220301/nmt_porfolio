@@ -15,7 +15,6 @@ export function useApi() {
   ) => {
     try {
       const isFormData = body instanceof FormData;
-      console.log('api base url', API_BASE_URL);
       const noCacheUrl = `${API_BASE_URL}${endpoint}?t=${Date.now()}`;
 
       const response = await fetch(noCacheUrl, {
