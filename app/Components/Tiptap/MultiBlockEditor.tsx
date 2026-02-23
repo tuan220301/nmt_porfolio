@@ -17,13 +17,11 @@ type MultiBlockEditorProps = {
  * Extract image URLs from HTML content
  */
 const extractImageUrls = (htmlContent: string): string[] => {
-    console.log(`\n🔎 [MultiBlockEditor.extractImageUrls] Extracting URLs from HTML (length: ${htmlContent.length})`);
     const imageUrls: string[] = [];
     try {
         const div = document.createElement('div');
         div.innerHTML = htmlContent;
         const images = div.querySelectorAll('img');
-        console.log(`   Found ${images.length} <img> elements`);
 
         images.forEach((img, idx) => {
             const src = img.getAttribute('src');
@@ -32,7 +30,6 @@ const extractImageUrls = (htmlContent: string): string[] => {
                 console.log(`   [${idx}] Image URL: ${src.substring(0, 60)}...`);
             }
         });
-        console.log(`✅ [MultiBlockEditor.extractImageUrls] Total URLs extracted: ${imageUrls.length}`);
     } catch (error) {
         console.error('❌ [MultiBlockEditor.extractImageUrls] Error extracting image URLs:', error);
     }
@@ -43,17 +40,13 @@ const extractImageUrls = (htmlContent: string): string[] => {
  * Delete images from S3 when block is deleted
  */
 const deleteBlockImages = async (blockContent: string) => {
-    console.log(`\n🗑️ [MultiBlockEditor.deleteBlockImages] Starting deletion process`);
     const imageUrls = extractImageUrls(blockContent);
 
     if (imageUrls.length === 0) {
-        console.log(`ℹ️ [MultiBlockEditor.deleteBlockImages] No images to delete`);
         return;
     }
 
     try {
-        console.log(`🗑️ [MultiBlockEditor.deleteBlockImages] Deleting ${imageUrls.length} images from S3...`);
-        console.log(`   Image URLs:`, imageUrls.map(url => url.substring(0, 60) + '...'));
 
         const deleteStartTime = Date.now();
         const response = await fetch('/api/persional_project/delete-images', {
@@ -63,10 +56,6 @@ const deleteBlockImages = async (blockContent: string) => {
         });
         const deleteDuration = Date.now() - deleteStartTime;
 
-        console.log(`📊 [MultiBlockEditor.deleteBlockImages] Response received (${deleteDuration}ms):`, {
-            status: response.status,
-            ok: response.ok,
-        });
 
         if (!response.ok) {
             const error = await response.text();
@@ -75,7 +64,6 @@ const deleteBlockImages = async (blockContent: string) => {
         }
 
         const data = await response.json();
-        console.log(`✅ [MultiBlockEditor.deleteBlockImages] Deleted ${data.deletedCount} images from S3`);
     } catch (error) {
         console.error('❌ [MultiBlockEditor.deleteBlockImages] Error deleting block images:', error);
     }
@@ -89,24 +77,14 @@ const MultiBlockEditor = ({
 }: MultiBlockEditorProps) => {
     const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(null);
 
-    // Debug isBorder and projectTitle on every render
-    console.log(`\n📋 [MultiBlockEditor] Component rendered:`, {
-        isBorder,
-        blockCount: blocks.length,
-        projectTitle: projectTitle || "EMPTY",
-        projectTitleTrimmed: projectTitle?.trim() || "EMPTY",
-        projectTitleType: typeof projectTitle,
-        projectTitleExists: !!projectTitle,
-        projectTitleLength: projectTitle?.length || 0,
-        focusedBlockIndex,
-    });
 
-    // Critical warning if projectTitle is missing
-    if (!projectTitle || projectTitle.trim() === '') {
-        console.warn(`⚠️ [MultiBlockEditor] WARNING: projectTitle is not provided or empty!`);
-        console.warn(`   This will cause images in blocks to be saved without project folder organization`);
-        console.warn(`   Expected: projectTitle should be passed from parent (DetailProject page)`);
-    }
+
+    // // Critical warning if projectTitle is missing
+    // if (!projectTitle || projectTitle.trim() === '') {
+    //     console.warn(`⚠️ [MultiBlockEditor] WARNING: projectTitle is not provided or empty!`);
+    //     console.warn(`   This will cause images in blocks to be saved without project folder organization`);
+    //     console.warn(`   Expected: projectTitle should be passed from parent (DetailProject page)`);
+    // }
     // Add new block after current index
     const addBlockAfter = useCallback(
         (index: number) => {
@@ -128,7 +106,6 @@ const MultiBlockEditor = ({
             updatedBlocks.push(newBlock);
             updatedBlocks.sort((a, b) => a.index - b.index);
             onBlocksChange(updatedBlocks);
-            console.log(`✅ [MultiBlockEditor.addBlockAfter] Successfully added new block at index ${index + 1}`);
         },
         [blocks, onBlocksChange]
     );
@@ -136,27 +113,19 @@ const MultiBlockEditor = ({
     // Delete block and its images from S3
     const deleteBlockWithImages = useCallback(
         async (index: number) => {
-            console.log(`\n🗑️ [MultiBlockEditor.deleteBlockWithImages] Deleting block at index ${index}`);
             if (blocks.length === 1) {
-                console.warn(`⚠️ [MultiBlockEditor.deleteBlockWithImages] Cannot delete last block`);
                 return; // Prevent deleting the last block
             }
 
             // Find the block to delete
             const blockToDelete = blocks.find((b) => b.index === index);
-            console.log(`   Block to delete:`, {
-                found: !!blockToDelete,
-                index: blockToDelete?.index,
-                hasContent: !!blockToDelete?.content,
-                contentLength: blockToDelete?.content?.length || 0,
-            });
+
 
             // Delete images from S3 if content contains any
             if (blockToDelete && blockToDelete.content) {
                 try {
                     const imageUrls = extractImageUrls(blockToDelete.content);
                     if (imageUrls.length > 0) {
-                        console.log(`   ${imageUrls.length} images found in block - deleting from S3...`);
                         await deleteBlockImages(blockToDelete.content);
                     } else {
                         console.log(`   No images found in block`);
@@ -166,17 +135,13 @@ const MultiBlockEditor = ({
                 }
             }
 
-            // Update blocks
-            console.log(`   Updating blocks array...`);
             const updatedBlocks = blocks
                 .filter((b) => b.index !== index)
                 .map((block) =>
                     block.index > index ? { ...block, index: block.index - 1 } : block
                 );
 
-            console.log(`   Updated blocks:`, updatedBlocks.map(b => ({ index: b.index, type: b.type })));
             onBlocksChange(updatedBlocks);
-            console.log(`✅ [MultiBlockEditor.deleteBlockWithImages] Block deleted successfully`);
         },
         [blocks, onBlocksChange]
     );
@@ -223,11 +188,11 @@ const MultiBlockEditor = ({
     // Update specific block content
     const updateBlockContent = useCallback(
         async (index: number, content: string) => {
-            console.log(`\n${"═".repeat(70)}`);
-            console.log(`📝 [MultiBlockEditor.updateBlockContent] BLOCK CONTENT UPDATE`);
-            console.log(`${"═".repeat(70)}`);
-            console.log(`   Block Index: ${index}`);
-            console.log(`   Timestamp: ${new Date().toISOString()}`);
+            // console.log(`\n${"═".repeat(70)}`);
+            // console.log(`📝 [MultiBlockEditor.updateBlockContent] BLOCK CONTENT UPDATE`);
+            // console.log(`${"═".repeat(70)}`);
+            // console.log(`   Block Index: ${index}`);
+            // console.log(`   Timestamp: ${new Date().toISOString()}`);
 
             // Find old content
             const oldBlock = blocks.find(b => b.index === index);
@@ -267,34 +232,34 @@ const MultiBlockEditor = ({
             const deletedImageUrls = oldImageUrls.filter(url => !newImageUrls.includes(url));
             const hasDeletedImages = deletedImageUrls.length > 0;
 
-            console.log(`   Changes detected:`, {
-                contentChanged,
-                imagesAdded,
-                imagesRemoved,
-                imageCountChanged,
-                oldImageCount,
-                newImageCount,
-                hasDeletedImages,
-                deletedImageCount: deletedImageUrls.length,
-            });
+            // console.log(`   Changes detected:`, {
+            //     contentChanged,
+            //     imagesAdded,
+            //     imagesRemoved,
+            //     imageCountChanged,
+            //     oldImageCount,
+            //     newImageCount,
+            //     hasDeletedImages,
+            //     deletedImageCount: deletedImageUrls.length,
+            // });
 
             // Log deleted image URLs
-            if (hasDeletedImages) {
-                console.log(`   🗑️ [DELETED IMAGES DETECTED] ${deletedImageUrls.length} image(s) were removed:`,
-                    deletedImageUrls.map(url => url.substring(0, 80) + '...')
-                );
-            }
+            // if (hasDeletedImages) {
+            //     console.log(`   🗑️ [DELETED IMAGES DETECTED] ${deletedImageUrls.length} image(s) were removed:`,
+            //         deletedImageUrls.map(url => url.substring(0, 80) + '...')
+            //     );
+            // }
 
             // Log image URLs if present in new content
             if (content.includes('<img')) {
                 if (newImageUrls.length > 0) {
-                    console.log(`   📸 Image URLs in new content (${newImageUrls.length} total):`, newImageUrls.map(url => {
-                        try {
-                            return url.substring(0, 80) + '...';
-                        } catch {
-                            return url;
-                        }
-                    }));
+                    // console.log(`   📸 Image URLs in new content (${newImageUrls.length} total):`, newImageUrls.map(url => {
+                    //     try {
+                    //         return url.substring(0, 80) + '...';
+                    //     } catch {
+                    //         return url;
+                    //     }
+                    // }));
                     if (imagesAdded) {
                         console.log(`   🎉 [NEW IMAGES DETECTED] Images were successfully added to block!`);
                         console.log(`   🔄 Will now save these ${newImageUrls.length} URL(s) to block ${index}`);
@@ -305,7 +270,6 @@ const MultiBlockEditor = ({
             // Delete images from S3 if any were removed
             if (hasDeletedImages) {
                 try {
-                    console.log(`   �️ [MultiBlockEditor.updateBlockContent] Deleting ${deletedImageUrls.length} removed images from S3...`);
 
                     const deleteStartTime = Date.now();
                     const deleteResponse = await fetch('/api/persional_project/delete-images', {
