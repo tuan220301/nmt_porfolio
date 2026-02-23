@@ -14,19 +14,25 @@ export async function GET(req: NextRequest) {
       .lean();
 
     const projectsWithImageUrl = projects.map((project) => {
-      let image_url = null;
+      let image_preview = null;
       if (project.image_preview) {
-        const preview = project.image_preview.toString();
-        // Fix malformed URLs (https: -> https://)
-        if (preview.startsWith('https:') && !preview.startsWith('https://')) {
-          image_url = preview.replace('https:', 'https://');
-        } else {
-          image_url = preview;
+        let url = project.image_preview.toString();
+
+        // Fix malformed URLs
+        // Case 1: https:nmt-... → https://nmt-...
+        if (url.startsWith('https:') && !url.startsWith('https://')) {
+          url = url.replace('https:', 'https://');
         }
+        // Case 2: nmt-... (no scheme) → https://nmt-...
+        else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+
+        image_preview = url;
       }
       return {
         ...project,
-        image_url,
+        image_preview,
       };
     });
 
