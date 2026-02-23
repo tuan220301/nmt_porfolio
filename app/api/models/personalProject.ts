@@ -15,6 +15,7 @@ export interface IPersonalProject extends Document {
   update_at: Date;
   user_id: mongoose.Schema.Types.ObjectId;
   image_preview: string; // Store S3 URL of the preview image
+  pin: boolean; // Pin project to top
 }
 
 const ContentBlockSchema = new Schema<IContentBlock>({
@@ -32,6 +33,7 @@ const PersonalProjectSchema = new Schema<IPersonalProject>({
   update_at: { type: Date, default: Date.now },
   user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
   image_preview: { type: String, required: false }, // Store S3 image URL
+  pin: { type: Boolean, default: false }, // Pin to top
 });
 const PersonalProject =
   mongoose.models.PersonalProject ||

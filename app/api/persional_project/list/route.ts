@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const projects = await PersonalProject.find()
-      .sort({ create_at: -1 })
+      .sort({ pin: -1, create_at: -1 }) // Pin first, then by create_at
       .lean();
 
     const projectsWithImageUrl = projects.map((project) => {

@@ -28,6 +28,7 @@ export type ProjectResponseType = {
   update_at: Date,
   image_preview: string,
   image_url: string,
+  pin?: boolean,
 };
 export type ResponseApiType<T> = {
   data: T,

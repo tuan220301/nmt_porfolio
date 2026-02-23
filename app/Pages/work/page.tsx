@@ -31,6 +31,8 @@ const AboutPage = () => {
   const { callApi } = useApi();
   const setProjectDataAtom = useSetRecoilState(WorkPageDetailData);
   const [listProject, setListProject] = useState<ProjectResponseType[]>([]);
+  const [pinningId, setPinningId] = useState<string | null>(null);
+
   useEffect(() => {
     setProjectDataAtom({
       contents: [],
@@ -81,6 +83,60 @@ const AboutPage = () => {
       setLoadingAtom(false);
     }
   }, [setLoadingAtom, setListProject, setToastAtom]);
+
+  const handleTogglePin = useCallback(async (e: React.MouseEvent, projectId: string | undefined, currentPin: boolean | undefined) => {
+    e.stopPropagation();
+    if (!projectId) return;
+
+    setPinningId(projectId);
+    try {
+      const response: ResponseApi<any> = await callApi(
+        "/api/persional_project/update-pin",
+        "POST",
+        {
+          projectId,
+          pin: !currentPin,
+        }
+      );
+
+      if (response && response.isSuccess) {
+        setToastAtom({
+          isOpen: true,
+          isAutoHide: true,
+          message: response.message,
+          status: "SUCCESS",
+        });
+        // Update listProject state to reflect the change immediately
+        setListProject((prev) =>
+          prev.map((p) =>
+            p._id === projectId ? { ...p, pin: !currentPin } : p
+          ).sort((a, b) => {
+            // Re-sort with pin first
+            if (a.pin && !b.pin) return -1;
+            if (!a.pin && b.pin) return 1;
+            return 0;
+          })
+        );
+      } else {
+        setToastAtom({
+          isOpen: true,
+          isAutoHide: true,
+          message: "Failed to update pin",
+          status: "ERROR",
+        });
+      }
+    } catch (error: any) {
+      setToastAtom({
+        isOpen: true,
+        isAutoHide: true,
+        message: error.message || "Error updating pin",
+        status: "ERROR",
+      });
+    } finally {
+      setPinningId(null);
+    }
+  }, [callApi, setToastAtom]);
+
   const handleProjectAction = useCallback((item?: ProjectResponseType) => {
     if (item) {
       setProjectDataAtom(item);
@@ -148,7 +204,7 @@ const AboutPage = () => {
               <button
                 onClick={() => handleProjectAction(project)}
                 key={project._id}
-                className="border rounded-lg w-full flex p-2 gap-4"
+                className="border rounded-lg w-full flex p-2 gap-4 relative"
               >
                 <div className="flex items-center justify-center w-[30%]">
                   <img
@@ -165,6 +221,38 @@ const AboutPage = () => {
                     <p>{project.des}</p>
                   </div>
                 </div>
+                {isLoggedAtom && (
+                  <button
+                    onClick={(e) => handleTogglePin(e, project._id, project.pin)}
+                    disabled={pinningId === project._id}
+                    className="absolute top-2 right-2 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    title={project.pin ? "Unpin this project" : "Pin this project"}
+                  >
+                    {project.pin ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="24px"
+                        viewBox="0 -960 960 960"
+                        width="24px"
+                        fill="currentColor"
+                        className="size-6"
+                      >
+                        <path d="M713-600 600-713l56-57 57 57 141-142 57 57-198 198ZM200-120v-640q0-33 23.5-56.5T280-840h240v80H280v518l200-86 200 86v-278h80v400L480-240 200-120Zm80-640h240-240Z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="24px"
+                        viewBox="0 -960 960 960"
+                        width="24px"
+                        fill="currentColor"
+                        className="size-6"
+                      >
+                        <path d="M200-120v-640q0-33 23.5-56.5T280-840h240v80H280v518l200-86 200 86v-278h80v400L480-240 200-120Zm80-640h240-240Zm400 160v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
               </button>
             );
           })}
