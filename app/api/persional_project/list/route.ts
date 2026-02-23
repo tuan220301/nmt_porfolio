@@ -16,8 +16,13 @@ export async function GET(req: NextRequest) {
     const projectsWithImageUrl = projects.map((project) => {
       let image_url = null;
       if (project.image_preview) {
-        const fileId = project.image_preview.toString();
-        image_url = `/api/image/${fileId}`;
+        const preview = project.image_preview.toString();
+        // Fix malformed URLs (https: -> https://)
+        if (preview.startsWith('https:') && !preview.startsWith('https://')) {
+          image_url = preview.replace('https:', 'https://');
+        } else {
+          image_url = preview;
+        }
       }
       return {
         ...project,
